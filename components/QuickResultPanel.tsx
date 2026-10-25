@@ -18,6 +18,7 @@ type Props = {
 export function QuickResultPanel({ input, result, action }: Props) {
   const [copied, setCopied] = useState(false);
   const extraMonthly = result.extraAnnualSpend / 12;
+  const hasRealEstate = input.realEstateValue > 0;
   const shareText =
     result.extraAnnualSpend > 0
       ? `私は毎年あと約${formatMan(result.extraAnnualSpend)}使えるみたい。あなたが使い切れる額は？ #使い切りプランナー`
@@ -42,7 +43,7 @@ export function QuickResultPanel({ input, result, action }: Props) {
     <div className="flex flex-col gap-6 rounded-3xl bg-pine p-6 text-white shadow-lg md:p-8" aria-live="polite">
       {result.extraAnnualSpend > 0 ? (
         <div>
-          <p className="font-bold text-white/80">あなたが毎年あと使える額</p>
+          <p className="font-bold text-white/80">{hasRealEstate ? "不動産の売却も含めて、毎年あと使える額" : "あなたが毎年あと使える額"}</p>
           <p className="mt-1 leading-none font-bold">
             <span className="text-6xl tabular-nums md:text-7xl">{man(result.extraAnnualSpend)}</span>
             <span className="ml-2 text-2xl">万円</span>
@@ -64,8 +65,36 @@ export function QuickResultPanel({ input, result, action }: Props) {
         </div>
       )}
 
+      {hasRealEstate && result.saleAge !== null && (
+        <div className="rounded-2xl bg-sun-soft p-5 text-ink">
+          <p className="text-sm font-bold text-muted">不動産の売却期限</p>
+          <p className="mt-1 text-3xl font-bold">
+            <span className="tabular-nums">{result.saleAge}</span>歳までに売却
+          </p>
+          <p className="mt-2 text-sm leading-relaxed">
+            {result.extraAnnualSpend > 0
+              ? `この使い方だと、${result.saleAge}歳ごろに預貯金・証券が尽きます。それまでに不動産を売却すると、手元に残る約${formatMan(result.saleProceeds)}で${input.lifeExpectancy}歳まで暮らせる計算です。`
+              : `${result.saleAge}歳ごろに預貯金・証券が尽きる見込みです。それまでに不動産の売却を考えましょう。`}
+          </p>
+          <p className="mt-3 border-t border-ink/10 pt-3 text-sm">
+            {result.extraAnnualSpendWithoutSale > 0
+              ? `売らずに暮らす場合は、毎年あと${formatMan(result.extraAnnualSpendWithoutSale)}です。`
+              : result.cashDepletionAge !== null
+                ? `売らない場合は、${result.cashDepletionAge}歳で預貯金・証券が尽きます。`
+                : "売らない場合は、上乗せして使える余裕はありません。"}
+          </p>
+          <p className="mt-2 text-xs text-muted">売却額は、諸費用・税の目安として1割を差し引いて計算しています。</p>
+        </div>
+      )}
+      {hasRealEstate && result.saleAge === null && (
+        <div className="rounded-2xl bg-white/10 p-5">
+          <p className="font-bold">不動産は売らなくても足りる見込みです</p>
+          <p className="mt-1 text-sm text-white/80">{input.lifeExpectancy}歳まで、預貯金・証券だけで暮らせる計算です。</p>
+        </div>
+      )}
+
       <div className="rounded-2xl bg-white p-3 md:p-4">
-        <BalanceChart path={result.path} plannedPath={result.plannedPath} safetyMargin={input.safetyMargin} />
+        <BalanceChart path={result.path} plannedPath={result.plannedPath} safetyMargin={input.safetyMargin} saleAge={result.extraAnnualSpend > 0 ? result.saleAge : null} />
         <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 px-2 text-sm text-muted">
           <li className="flex items-center gap-2">
             <span className="inline-block h-1 w-5 rounded bg-pine" />
@@ -79,6 +108,12 @@ export function QuickResultPanel({ input, result, action }: Props) {
             <span className="inline-block w-5 border-t-2 border-dashed border-sun" />
             残しておきたい額
           </li>
+          {hasRealEstate && result.saleAge !== null && result.extraAnnualSpend > 0 && (
+            <li className="flex items-center gap-2">
+              <span className="inline-block h-3 w-3 rounded-full bg-sun" />
+              不動産を売却
+            </li>
+          )}
         </ul>
       </div>
 
@@ -93,15 +128,6 @@ export function QuickResultPanel({ input, result, action }: Props) {
             {formatMan(result.extraAnnualSpend * (input.lifeExpectancy - input.currentAge))}
           </dd>
         </div>
-        {input.realEstateValue > 0 && (
-          <div className="col-span-2 rounded-2xl bg-white/10 p-4">
-            <dt className="text-white/75">不動産（{formatMan(input.realEstateValue)}）も含めて最期に残る資産</dt>
-            <dd className="mt-1 text-xl font-bold whitespace-nowrap tabular-nums md:text-2xl">
-              {formatMan(Math.max(0, result.plannedPath[result.plannedPath.length - 1].balance) + input.realEstateValue)}
-            </dd>
-            <p className="mt-1 text-xs text-white/70">不動産は売らずに持ち続ける前提で計算しています。</p>
-          </div>
-        )}
       </dl>
 
       <div className="mt-auto flex flex-col gap-3 sm:flex-row">

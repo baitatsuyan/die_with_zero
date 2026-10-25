@@ -55,7 +55,7 @@ export const QUICK_FIELDS: QuickField[] = [
     key: "realEstateValue",
     label: "不動産の合計",
     question: "自宅や実家などの不動産は、合わせていくらくらいですか？",
-    hint: "売ったらいくらになりそうかの目安。持ち続ける前提で、生活費の取り崩しには使いません",
+    hint: "売ったらいくらになりそうかの目安。預貯金・証券が尽きる前に売る前提で、売却の期限をお伝えします",
     unit: "万円",
     min: 0,
     max: 100000,

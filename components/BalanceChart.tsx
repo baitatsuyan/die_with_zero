@@ -8,6 +8,7 @@ type Props = {
   path: YearPoint[];
   plannedPath: YearPoint[];
   safetyMargin: number;
+  saleAge?: number | null; // 不動産を売却する年齢（使い切りプランの線上に印を付ける）
 };
 
 const FONT_SIZE = 13;
@@ -16,7 +17,7 @@ const FONT_SIZE = 13;
  * 資産残高の推移（追加支出なし／使い切りプラン）を描く簡易チャート。
  * 表示幅に合わせて実寸で描くので、スマホでも目盛りの文字が小さくならない。
  */
-export function BalanceChart({ path, plannedPath, safetyMargin }: Props) {
+export function BalanceChart({ path, plannedPath, safetyMargin, saleAge = null }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(640);
 
@@ -44,6 +45,7 @@ export function BalanceChart({ path, plannedPath, safetyMargin }: Props) {
   const line = (pts: YearPoint[]) => pts.map((p, i) => `${i ? "L" : "M"}${x(p.age)},${y(p.balance)}`).join(" ");
   const area = (pts: YearPoint[]) => `${line(pts)} L${x(maxAge)},${y(0)} L${x(minAge)},${y(0)} Z`;
 
+  const salePoint = saleAge !== null ? plannedPath.find((p) => p.age === saleAge) : undefined;
   const ticks = niceTicks(minY, maxY, narrow ? 3 : 5);
   // 狭い画面では10歳刻みにして、ラベル同士が重ならないようにする
   const ageStep = narrow ? 10 : 5;
@@ -77,6 +79,21 @@ export function BalanceChart({ path, plannedPath, safetyMargin }: Props) {
         <path d={area(plannedPath)} fill="var(--color-pine)" opacity={0.12} />
         <path d={line(path)} fill="none" stroke="var(--color-muted)" strokeWidth={2} strokeDasharray="2 4" strokeLinecap="round" />
         <path d={line(plannedPath)} fill="none" stroke="var(--color-pine)" strokeWidth={3} strokeLinejoin="round" />
+        {salePoint && (
+          <g>
+            <circle cx={x(salePoint.age)} cy={y(salePoint.balance)} r={6} fill="var(--color-sun)" stroke="white" strokeWidth={2} />
+            <text
+              x={x(salePoint.age)}
+              y={y(salePoint.balance) - 12}
+              textAnchor={x(salePoint.age) > W - 70 ? "end" : "middle"}
+              fontSize={FONT_SIZE}
+              fontWeight="bold"
+              fill="var(--color-sun)"
+            >
+              {salePoint.age}歳 売却
+            </text>
+          </g>
+        )}
         <text x={PAD.left - 6} y={12} textAnchor="end" fontSize={FONT_SIZE - 1} fill="var(--color-muted)">
           万円
         </text>

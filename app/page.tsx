@@ -15,7 +15,9 @@ const PROBLEMS = [
 const EXAMPLE_RESULT = runQuickDiagnosis(DEFAULT_QUICK_INPUT);
 const EXAMPLE_HOUSE_VALUE = DEFAULT_QUICK_INPUT.realEstateValue; // 実家の推定時価（万円）
 const EXAMPLE_FINAL_BALANCE = EXAMPLE_RESULT.plannedPath[EXAMPLE_RESULT.plannedPath.length - 1].balance;
-const EXAMPLE_ESTATE = EXAMPLE_FINAL_BALANCE + EXAMPLE_HOUSE_VALUE;
+const EXAMPLE_SALE_AGE = EXAMPLE_RESULT.saleAge;
+// 売却する計画なら、亡くなる時点で不動産は現金に変わっている
+const EXAMPLE_ESTATE = EXAMPLE_FINAL_BALANCE + (EXAMPLE_SALE_AGE !== null ? 0 : EXAMPLE_HOUSE_VALUE);
 const EXAMPLE_TAX = calculateInheritanceTax({
   estate: EXAMPLE_ESTATE,
   liabilities: 0,
@@ -37,7 +39,12 @@ const OUTPUTS = [
         ? `遺産${fmt(EXAMPLE_ESTATE)}万円・配偶者の税額軽減後`
         : `遺産${fmt(EXAMPLE_ESTATE)}万円は基礎控除 ${fmt(EXAMPLE_TAX.basicDeduction)}万円の範囲内`,
   },
-  { label: "実家の推定時価", value: fmt(EXAMPLE_HOUSE_VALUE), unit: "万円", note: "周辺の取引 38件から推定" },
+  {
+    label: "実家の推定時価",
+    value: fmt(EXAMPLE_HOUSE_VALUE),
+    unit: "万円",
+    note: EXAMPLE_SALE_AGE !== null ? `周辺の取引 38件から推定・${EXAMPLE_SALE_AGE}歳までに売却する計画` : "周辺の取引 38件から推定",
+  },
 ];
 
 const STEPS = [
@@ -60,7 +67,7 @@ const FEATURES = [
   {
     tag: "整理",
     title: "資産整理を、計画のイベントとして扱う",
-    body: "「75歳で実家を売却」「70歳から賃貸に」。整理の方針を決めると、その後の資産推移にそのまま反映されます。",
+    body: "預貯金・証券が何歳で尽きるかから逆算して、実家を「何歳までに売るか」をお伝えします。決めた方針は、その後の資産推移にそのまま反映されます。",
   },
 ];
 
@@ -178,7 +185,7 @@ export default function Home() {
                 </div>
               ))}
             </div>
-            <p className="mt-4 text-center text-xs text-muted">※ 表示は入力例です（かんたん診断の初期値に、実家1件・相続人3人を加えた場合）。</p>
+            <p className="mt-4 text-center text-xs text-muted">※ 表示は入力例です（かんたん診断の初期値に、相続人3人を加えた場合）。</p>
           </div>
         </section>
 
@@ -344,13 +351,15 @@ function HeroCard() {
   const maxY = Math.max(...heroResult.path.map((p) => p.balance), ...heroResult.plannedPath.map((p) => p.balance)) * 1.1;
   const planned = sparkPath(heroResult.plannedPath, maxY);
   const unspent = sparkPath(heroResult.path, maxY);
+  const sale = heroResult.plannedPath.find((p) => p.age === heroResult.saleAge);
+  const saleX = sale ? ((sale.age - example.currentAge) / (example.lifeExpectancy - example.currentAge)) * SPARK_W : 0;
   return (
     <div className="relative mx-auto w-full max-w-md">
       <div className="absolute -top-8 -right-10 h-48 w-48 rounded-full bg-sun-soft" aria-hidden />
       <div className="absolute -bottom-10 -left-8 h-36 w-36 rounded-full bg-pine-soft" aria-hidden />
       <div className="relative rounded-3xl border border-line bg-white p-6 shadow-xl">
         <p className="text-sm font-bold text-muted">{example.currentAge}歳・ご夫婦の例</p>
-        <p className="mt-3 text-sm">毎年あと使える額</p>
+        <p className="mt-3 text-sm">{sale ? "実家の売却も含めて、毎年あと使える額" : "毎年あと使える額"}</p>
         <p className="leading-none font-bold text-pine">
           <span className="text-6xl tabular-nums">{Math.round(heroResult.extraAnnualSpend).toLocaleString()}</span>
           <span className="ml-1 text-xl">万円</span>
@@ -359,9 +368,15 @@ function HeroCard() {
           <path d={`${planned} L${SPARK_W},${SPARK_H} L0,${SPARK_H} Z`} fill="var(--color-pine)" opacity="0.12" />
           <path d={planned} fill="none" stroke="var(--color-pine)" strokeWidth="3" strokeLinejoin="round" />
           <path d={unspent} fill="none" stroke="var(--color-muted)" strokeWidth="2" strokeDasharray="2 4" />
+          {sale && <circle cx={saleX} cy={SPARK_H - (Math.max(sale.balance, 0) / maxY) * SPARK_H} r="6" fill="var(--color-sun)" />}
         </svg>
-        <div className="mt-1 flex justify-between text-xs text-muted">
+        <div className="relative mt-1 flex justify-between text-xs text-muted">
           <span>{example.currentAge}歳</span>
+          {sale && (
+            <span className="absolute -translate-x-1/2 font-bold whitespace-nowrap text-sun" style={{ left: `${(saleX / SPARK_W) * 100}%` }}>
+              {sale.age}歳 実家を売却
+            </span>
+          )}
           <span>{example.lifeExpectancy}歳</span>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
@@ -378,7 +393,7 @@ function HeroCard() {
         </div>
         <div className="mt-3 flex items-center gap-2 rounded-xl bg-sun-soft px-3 py-2 text-sm">
           <span className="font-bold text-alert">!</span>
-          方針が「未定」の不動産が1件あります
+          {sale ? `実家の売却期限まで、あと${sale.age - example.currentAge}年です` : "方針が「未定」の不動産が1件あります"}
         </div>
       </div>
     </div>
