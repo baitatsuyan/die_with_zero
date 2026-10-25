@@ -32,7 +32,7 @@ export function QuickResultPanel({ input, result, action }: Props) {
       : "人生後半のお金、いくら使えるか試算してみました。 #使い切りプランナー";
 
   const share = async () => {
-    const url = typeof window !== "undefined" ? `${window.location.origin}/quick` : "";
+    const url = typeof window !== "undefined" ? `${window.location.origin}${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/quick/` : "";
     try {
       if (navigator.share) {
         await navigator.share({ text: shareText, url });
