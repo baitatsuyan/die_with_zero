@@ -112,9 +112,9 @@ export default function Home() {
                 資産と年齢を入れるだけで、使える額・残る額・相続税の目安・実家の時価が一枚で見えます。
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <a href="#quick" className="rounded-full bg-sun px-8 py-4 text-center text-lg font-bold text-ink shadow-md transition hover:brightness-105">
+                <Link href="/quick" className="rounded-full bg-sun px-8 py-4 text-center text-lg font-bold text-ink shadow-md transition hover:brightness-105">
                   1分でかんたん診断（無料）
-                </a>
+                </Link>
                 <span className="text-sm text-muted">登録不要・口座連携なし</span>
               </div>
             </div>
@@ -309,9 +309,9 @@ export default function Home() {
             </h2>
             <p className="mt-6 text-muted">詳細診断（不動産・相続・タイムバケット）は現在準備中です。</p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <a href="#quick" className="rounded-full bg-sun px-8 py-4 text-lg font-bold text-ink shadow-md transition hover:brightness-105">
+              <Link href="/quick" className="rounded-full bg-sun px-8 py-4 text-lg font-bold text-ink shadow-md transition hover:brightness-105">
                 かんたん診断をやってみる
-              </a>
+              </Link>
               <a href="#" className="rounded-full border-2 border-pine px-8 py-4 text-lg font-bold text-pine transition hover:bg-pine-soft">
                 詳細診断の開始を知らせてもらう
               </a>

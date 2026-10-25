@@ -12,7 +12,7 @@ export function SiteHeader() {
           <Link href="/inheritance" className="text-sm font-bold text-pine hover:underline">
             相続税の目安
           </Link>
-          <Link href="/#quick" className="rounded-full bg-pine px-5 py-2 text-sm font-bold text-white transition hover:bg-pine-dark">
+          <Link href="/quick" className="rounded-full bg-pine px-5 py-2 text-sm font-bold text-white transition hover:bg-pine-dark">
             無料で診断
           </Link>
         </nav>

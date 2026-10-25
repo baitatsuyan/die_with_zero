@@ -95,7 +95,7 @@ export default function InheritancePage() {
                 >
                   税理士に相談する（準備中）
                 </button>
-                <Link href="/#quick" className="rounded-full border border-white/40 px-8 py-4 text-center font-bold transition hover:bg-white/10">
+                <Link href="/quick" className="rounded-full border border-white/40 px-8 py-4 text-center font-bold transition hover:bg-white/10">
                   毎年あと使える額を診断する
                 </Link>
               </div>
