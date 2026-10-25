@@ -65,7 +65,7 @@ export function QuickResultPanel({ input, result, action }: Props) {
 
       <div className="rounded-2xl bg-white p-3 md:p-4">
         <BalanceChart path={result.path} plannedPath={result.plannedPath} safetyMargin={input.safetyMargin} />
-        <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 px-2 text-xs text-muted">
+        <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 px-2 text-sm text-muted">
           <li className="flex items-center gap-2">
             <span className="inline-block h-1 w-5 rounded bg-pine" />
             使い切りプラン
