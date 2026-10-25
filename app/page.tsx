@@ -8,11 +8,22 @@ const PROBLEMS = [
   { title: "相続の話を家族でできない", body: "切り出すきっかけがない。そもそも相続税がかかるのかも分からない。" },
 ];
 
+// 詳細診断の入力例。金融資産まわりはかんたん診断の初期値と同じ前提で計算する。
+const EXAMPLE_RESULT = runQuickDiagnosis(DEFAULT_QUICK_INPUT);
+const EXAMPLE_HOUSE_VALUE = 2350; // 実家の推定時価（万円）
+const EXAMPLE_HEIRS = 3; // 配偶者と子2人
+const EXAMPLE_BASIC_DEDUCTION = 3000 + 600 * EXAMPLE_HEIRS;
+const EXAMPLE_FINAL_BALANCE = EXAMPLE_RESULT.plannedPath[EXAMPLE_RESULT.plannedPath.length - 1].balance;
+const EXAMPLE_ESTATE = EXAMPLE_FINAL_BALANCE + EXAMPLE_HOUSE_VALUE;
+const fmt = (v: number) => Math.round(v).toLocaleString();
+
 const OUTPUTS = [
-  { label: "毎年あと使える額", value: "180", unit: "万円/年", note: "最期に残したい額を守ったうえで" },
-  { label: "最期に残る見込み額", value: "620", unit: "万円", note: "90歳時点の見込み" },
-  { label: "相続税の目安", value: "0", unit: "円", note: "基礎控除 4,800万円の範囲内" },
-  { label: "実家の推定時価", value: "2,350", unit: "万円", note: "周辺の取引 38件から推定" },
+  { label: "毎年あと使える額", value: fmt(EXAMPLE_RESULT.extraAnnualSpend), unit: "万円/年", note: "最期に残したい額を守ったうえで" },
+  { label: "最期に残る見込み額", value: fmt(EXAMPLE_FINAL_BALANCE), unit: "万円", note: `${DEFAULT_QUICK_INPUT.lifeExpectancy}歳時点・使い切りプランの場合` },
+  EXAMPLE_ESTATE <= EXAMPLE_BASIC_DEDUCTION
+    ? { label: "相続税の目安", value: "0", unit: "円", note: `遺産${fmt(EXAMPLE_ESTATE)}万円は基礎控除 ${fmt(EXAMPLE_BASIC_DEDUCTION)}万円の範囲内` }
+    : { label: "相続税の目安", value: "要確認", unit: "", note: `遺産${fmt(EXAMPLE_ESTATE)}万円が基礎控除 ${fmt(EXAMPLE_BASIC_DEDUCTION)}万円を超えます` },
+  { label: "実家の推定時価", value: fmt(EXAMPLE_HOUSE_VALUE), unit: "万円", note: "周辺の取引 38件から推定" },
 ];
 
 const STEPS = [
@@ -158,7 +169,7 @@ export default function Home() {
                 </div>
               ))}
             </div>
-            <p className="mt-4 text-center text-xs text-muted">※ 表示は入力例です。</p>
+            <p className="mt-4 text-center text-xs text-muted">※ 表示は入力例です（かんたん診断の初期値に、実家1件・相続人3人を加えた場合）。</p>
           </div>
         </section>
 
