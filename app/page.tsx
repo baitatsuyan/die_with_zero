@@ -1,4 +1,5 @@
 import { QuickDiagnosis } from "@/components/QuickDiagnosis";
+import { DEFAULT_QUICK_INPUT, runQuickDiagnosis, type YearPoint } from "@/lib/simulation";
 
 const PROBLEMS = [
   { title: "いくらまで使っていいか分からない", body: "老後が不安で、つい貯め込んでしまう。気づけば使わないまま、という方は少なくありません。" },
@@ -312,28 +313,44 @@ export default function Home() {
   );
 }
 
+const SPARK_W = 300;
+const SPARK_H = 110;
+
+/** 年齢ごとの残高を、ヒーローカード用の小さな折れ線のパスに変換する。 */
+function sparkPath(path: YearPoint[], maxY: number): string {
+  const first = path[0].age;
+  const span = path[path.length - 1].age - first;
+  return path
+    .map((p, i) => `${i ? "L" : "M"}${((p.age - first) / span) * SPARK_W},${SPARK_H - (Math.max(p.balance, 0) / maxY) * SPARK_H}`)
+    .join(" ");
+}
+
 function HeroCard() {
+  // かんたん診断の初期値と同じ入力例で表示する
+  const example = DEFAULT_QUICK_INPUT;
+  const heroResult = runQuickDiagnosis(example);
+  const maxY = Math.max(...heroResult.path.map((p) => p.balance), ...heroResult.plannedPath.map((p) => p.balance)) * 1.1;
+  const planned = sparkPath(heroResult.plannedPath, maxY);
+  const unspent = sparkPath(heroResult.path, maxY);
   return (
     <div className="relative mx-auto w-full max-w-md">
       <div className="absolute -top-8 -right-10 h-48 w-48 rounded-full bg-sun-soft" aria-hidden />
       <div className="absolute -bottom-10 -left-8 h-36 w-36 rounded-full bg-pine-soft" aria-hidden />
       <div className="relative rounded-3xl border border-line bg-white p-6 shadow-xl">
-        <p className="text-sm font-bold text-muted">62歳・ご夫婦の例</p>
+        <p className="text-sm font-bold text-muted">{example.currentAge}歳・ご夫婦の例</p>
         <p className="mt-3 text-sm">毎年あと使える額</p>
         <p className="leading-none font-bold text-pine">
-          <span className="text-6xl tabular-nums">180</span>
+          <span className="text-6xl tabular-nums">{Math.round(heroResult.extraAnnualSpend).toLocaleString()}</span>
           <span className="ml-1 text-xl">万円</span>
         </p>
-        <svg viewBox="0 0 300 110" className="mt-5 w-full" aria-hidden>
-          <path d="M0,30 C60,22 100,26 150,40 S240,85 300,95 L300,110 L0,110 Z" fill="var(--color-pine)" opacity="0.12" />
-          <path d="M0,30 C60,22 100,26 150,40 S240,85 300,95" fill="none" stroke="var(--color-pine)" strokeWidth="3" />
-          <path d="M0,30 C70,16 150,8 300,5" fill="none" stroke="var(--color-muted)" strokeWidth="2" strokeDasharray="2 4" />
-          <circle cx="210" cy="72" r="6" fill="var(--color-sun)" />
+        <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} className="mt-5 w-full" aria-hidden>
+          <path d={`${planned} L${SPARK_W},${SPARK_H} L0,${SPARK_H} Z`} fill="var(--color-pine)" opacity="0.12" />
+          <path d={planned} fill="none" stroke="var(--color-pine)" strokeWidth="3" strokeLinejoin="round" />
+          <path d={unspent} fill="none" stroke="var(--color-muted)" strokeWidth="2" strokeDasharray="2 4" />
         </svg>
         <div className="mt-1 flex justify-between text-xs text-muted">
-          <span>62歳</span>
-          <span className="font-bold text-sun">75歳 実家を売却</span>
-          <span>90歳</span>
+          <span>{example.currentAge}歳</span>
+          <span>{example.lifeExpectancy}歳</span>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
           <div className="rounded-xl bg-cream p-3">
