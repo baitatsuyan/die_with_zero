@@ -11,6 +11,13 @@ export type InheritanceInput = {
   spouseAcquisition?: number;
 };
 
+export type HeirTax = {
+  role: "spouse" | "child" | "other";
+  ratio: number; // 取得割合
+  acquisition: number; // 取得額（課税価格ベース）
+  tax: number; // 納める相続税（概算）
+};
+
 export type InheritanceResult = {
   heirsCount: number; // 法定相続人の数
   insuranceExemption: number; // 死亡保険金の非課税枠（適用額）
@@ -20,6 +27,7 @@ export type InheritanceResult = {
   totalTax: number; // 相続税の総額（配偶者の税額軽減前）
   spouseReduction: number; // 配偶者の税額軽減
   payableTax: number; // 納める相続税の合計（概算）
+  heirs: HeirTax[]; // 相続人ごとの内訳
 };
 
 // 相続税の速算表（法定相続分に応じた取得金額の上限, 税率, 控除額）
@@ -65,11 +73,28 @@ export function calculateInheritanceTax(input: InheritanceInput): InheritanceRes
         childrenCount * taxForShare(taxableEstate * shares.child);
 
   // 配偶者の税額軽減：配偶者の取得分のうち「1億6,000万円」と「法定相続分」の多い方までは非課税
+  const spouseRatio = hasSpouse
+    ? Math.min(1, input.spouseAcquisition !== undefined && taxablePrice > 0 ? input.spouseAcquisition / taxablePrice : shares.spouse)
+    : 0;
   let spouseReduction = 0;
   if (hasSpouse && taxablePrice > 0) {
-    const acquisition = input.spouseAcquisition ?? taxablePrice * shares.spouse;
+    const acquisition = taxablePrice * spouseRatio;
     const exemptAmount = Math.min(acquisition, Math.max(16000, taxablePrice * shares.spouse));
     spouseReduction = Math.min(totalTax, (totalTax * exemptAmount) / taxablePrice);
+  }
+
+  // 相続税の総額を実際の取得割合で按分する（相続人がいない場合は1人が全部を取得する扱い）
+  const heirs: HeirTax[] = [];
+  if (heirsCount === 0) {
+    heirs.push({ role: "other", ratio: 1, acquisition: taxablePrice, tax: totalTax });
+  } else {
+    if (hasSpouse) {
+      heirs.push({ role: "spouse", ratio: spouseRatio, acquisition: taxablePrice * spouseRatio, tax: totalTax * spouseRatio - spouseReduction });
+    }
+    const childRatio = childrenCount > 0 ? (1 - spouseRatio) / childrenCount : 0;
+    for (let i = 0; i < childrenCount; i++) {
+      heirs.push({ role: "child", ratio: childRatio, acquisition: taxablePrice * childRatio, tax: totalTax * childRatio });
+    }
   }
 
   return {
@@ -81,5 +106,6 @@ export function calculateInheritanceTax(input: InheritanceInput): InheritanceRes
     totalTax,
     spouseReduction,
     payableTax: totalTax - spouseReduction,
+    heirs,
   };
 }

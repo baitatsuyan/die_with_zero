@@ -44,6 +44,14 @@ describe("calculateInheritanceTax", () => {
     expect(r.payableTax).toBeCloseTo(315);
   });
 
+  it("相続人ごとの内訳の合計が納める相続税の合計と一致する", () => {
+    const r = calculateInheritanceTax({ ...base, estate: 10000, hasSpouse: true, childrenCount: 2 });
+    expect(r.heirs.map((h) => h.role)).toEqual(["spouse", "child", "child"]);
+    expect(r.heirs[0].tax).toBeCloseTo(0);
+    expect(r.heirs[1].tax).toBeCloseTo(157.5);
+    expect(r.heirs.reduce((sum, h) => sum + h.tax, 0)).toBeCloseTo(r.payableTax);
+  });
+
   it("配偶者がすべて取得すれば1億6,000万円まで税額は0", () => {
     const r = calculateInheritanceTax({ ...base, estate: 16000, hasSpouse: true, childrenCount: 1, spouseAcquisition: 16000 });
     expect(r.totalTax).toBeGreaterThan(0);
