@@ -23,7 +23,8 @@ export type QuickResult = {
   finalBalance: number; // 追加支出なしで最期に残る見込み額
   extraAnnualSpend: number; // 毎年あと使える額（必要になったら不動産を売却する前提）
   extraAnnualSpendWithoutSale: number; // 不動産を売らずに暮らす場合の毎年あと使える額
-  saleAge: number | null; // 使い切りプランで不動産の売却が必要になる年齢（この年齢までに売る）
+  saleAge: number | null; // 売却期限（現金が尽きる年の SALE_LEAD_YEARS 年前）。計算もこの年齢で売却した場合
+  cashRunOutAge: number | null; // 売却しなければ現金が尽きる年齢
   saleProceeds: number; // 売却で手元に残る額の目安（諸費用・税を簡易控除）
   cashDepletionAge: number | null; // 追加支出なし・売却なしで現金が尽きる年齢
   depletionAge: number | null; // 追加支出なしで、売却しても資産が尽きる年齢
@@ -31,6 +32,9 @@ export type QuickResult = {
 
 /** 売却時の諸費用・税（仲介手数料・譲渡所得税など）として差し引く割合の目安。 */
 export const SALE_COST_RATE = 0.1;
+
+/** 売却には時間がかかるため、現金が尽きる何年前を売却期限とするか。 */
+export const SALE_LEAD_YEARS = 3;
 
 export const DEFAULT_QUICK_INPUT: QuickInput = {
   currentAge: 60,
@@ -47,16 +51,14 @@ export const DEFAULT_QUICK_INPUT: QuickInput = {
   inflationRate: 0.015,
 };
 
-export type Simulation = { path: YearPoint[]; saleAge: number | null };
+export type Simulation = { path: YearPoint[]; saleAge: number | null; cashRunOutAge: number | null };
 
-/**
- * 年単位で現金（預貯金・証券）の残高を推移計算する。extraAnnualSpend は毎年の追加支出（インフレ考慮なし）。
- * allowSale が true なら、現金が尽きる年に不動産を売却し、売却額（諸費用・税を差し引いた額）を現金に加える。
- */
-export function simulatePlan(input: QuickInput, extraAnnualSpend = 0, allowSale = false): Simulation {
+/** 年単位で現金（預貯金・証券）の残高を推移計算する。saleAt の年齢になった時点で不動産を売却する。 */
+function runCashFlow(input: QuickInput, extraAnnualSpend: number, saleAt: number | "whenNeeded" | null) {
   const path: YearPoint[] = [{ age: input.currentAge, balance: input.financialAssets }];
+  const proceeds = input.realEstateValue * (1 - SALE_COST_RATE);
   let balance = input.financialAssets;
-  let saleAge: number | null = null;
+  let soldAt: number | null = null;
   for (let age = input.currentAge; age < input.lifeExpectancy; age++) {
     const yearsFromNow = age - input.currentAge;
     const pension = age >= input.pensionStartAge ? input.monthlyPension * 12 : 0;
@@ -65,13 +67,29 @@ export function simulatePlan(input: QuickInput, extraAnnualSpend = 0, allowSale 
     const livingCost = input.monthlyLivingCost * 12 * Math.pow(1 + input.inflationRate, yearsFromNow);
     const investmentGain = balance > 0 ? balance * input.expectedReturn : 0;
     balance = balance + income - livingCost - extraAnnualSpend + investmentGain;
-    if (allowSale && saleAge === null && balance < 0 && input.realEstateValue > 0) {
-      balance += input.realEstateValue * (1 - SALE_COST_RATE);
-      saleAge = age + 1;
+    const sellNow = saleAt === "whenNeeded" ? balance < 0 : saleAt === age + 1;
+    if (soldAt === null && sellNow && input.realEstateValue > 0) {
+      balance += proceeds;
+      soldAt = age + 1;
     }
     path.push({ age: age + 1, balance });
   }
-  return { path, saleAge };
+  return { path, soldAt };
+}
+
+/**
+ * 年単位で現金（預貯金・証券）の残高を推移計算する。extraAnnualSpend は毎年の追加支出（インフレ考慮なし）。
+ * allowSale が true なら、現金が尽きる年の SALE_LEAD_YEARS 年前に不動産を売却し、
+ * 売却額（諸費用・税を差し引いた額）を現金に加える。
+ */
+export function simulatePlan(input: QuickInput, extraAnnualSpend = 0, allowSale = false): Simulation {
+  if (!allowSale || input.realEstateValue <= 0) {
+    return { path: runCashFlow(input, extraAnnualSpend, null).path, saleAge: null, cashRunOutAge: null };
+  }
+  const cashRunOutAge = runCashFlow(input, extraAnnualSpend, "whenNeeded").soldAt;
+  if (cashRunOutAge === null) return { path: runCashFlow(input, extraAnnualSpend, null).path, saleAge: null, cashRunOutAge: null };
+  const saleAge = Math.max(input.currentAge + 1, cashRunOutAge - SALE_LEAD_YEARS);
+  return { path: runCashFlow(input, extraAnnualSpend, saleAge).path, saleAge, cashRunOutAge };
 }
 
 /** 売却を考えない資産推移。 */
@@ -114,6 +132,7 @@ export function runQuickDiagnosis(input: QuickInput): QuickResult {
     extraAnnualSpendWithoutSale,
     // 使える額が0のとき（使い切りプランが組めないとき）は、追加支出なしで現金が尽きる年が売却の期限
     saleAge: extraAnnualSpend > 0 ? planned.saleAge : base.saleAge,
+    cashRunOutAge: extraAnnualSpend > 0 ? planned.cashRunOutAge : base.cashRunOutAge,
     saleProceeds: input.realEstateValue * (1 - SALE_COST_RATE),
     cashDepletionAge: firstNegativeAge(simulate(input)),
     depletionAge: firstNegativeAge(base.path),

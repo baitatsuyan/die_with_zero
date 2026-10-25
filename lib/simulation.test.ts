@@ -70,10 +70,17 @@ describe("不動産の売却", () => {
     safetyMargin: 0,
   };
 
-  it("現金が尽きる年に売却し、諸費用・税を差し引いた額を現金に加える", () => {
-    const { path, saleAge } = simulatePlan(flat, 0, true);
-    expect(saleAge).toBe(83);
-    expect(path.map((p) => p.balance)).toEqual([250, 130, 10, 790, 670, 550]);
+  it("現金が尽きる年の3年前を売却期限とし、諸費用・税を差し引いた額を現金に加える", () => {
+    const { path, saleAge, cashRunOutAge } = simulatePlan({ ...flat, currentAge: 78, lifeExpectancy: 83, financialAssets: 490 }, 0, true);
+    expect(cashRunOutAge).toBe(83);
+    expect(saleAge).toBe(80);
+    expect(path.map((p) => p.balance)).toEqual([490, 370, 1150, 1030, 910, 790]);
+  });
+
+  it("売却期限が今より前になる場合は、来年を期限にする", () => {
+    const { saleAge, cashRunOutAge } = simulatePlan(flat, 0, true);
+    expect(cashRunOutAge).toBe(83);
+    expect(saleAge).toBe(81);
   });
 
   it("売却を前提にすると使える額が増え、売却が必要な年齢が分かる", () => {
@@ -87,6 +94,7 @@ describe("不動産の売却", () => {
     const r = runQuickDiagnosis({ ...DEFAULT_QUICK_INPUT, financialAssets: 1500, realEstateValue: 300 });
     expect(r.extraAnnualSpend).toBe(0);
     expect(r.cashDepletionAge).not.toBeNull();
-    expect(r.saleAge).toBe(r.cashDepletionAge);
+    expect(r.cashRunOutAge).toBe(r.cashDepletionAge);
+    expect(r.saleAge).toBe(Math.max(DEFAULT_QUICK_INPUT.currentAge + 1, r.cashDepletionAge! - 3));
   });
 });

@@ -19,6 +19,13 @@ export function QuickResultPanel({ input, result, action }: Props) {
   const [copied, setCopied] = useState(false);
   const extraMonthly = result.extraAnnualSpend / 12;
   const hasRealEstate = input.realEstateValue > 0;
+  // 売却期限の目安：現金が尽きる2〜3年前。期限が目前で余裕が取れないときは「できるだけ早めに」
+  const saleWindow =
+    result.saleAge === null || result.cashRunOutAge === null
+      ? ""
+      : result.cashRunOutAge - result.saleAge >= 3
+        ? `2〜3年前の${result.saleAge}〜${result.saleAge + 1}歳`
+        : `できるだけ早めに、遅くとも${result.saleAge}歳`;
   const shareText =
     result.extraAnnualSpend > 0
       ? `私は毎年あと約${formatMan(result.extraAnnualSpend)}使えるみたい。あなたが使い切れる額は？ #使い切りプランナー`
@@ -72,9 +79,10 @@ export function QuickResultPanel({ input, result, action }: Props) {
             <span className="tabular-nums">{result.saleAge}</span>歳までに売却
           </p>
           <p className="mt-2 text-sm leading-relaxed">
-            {result.extraAnnualSpend > 0
-              ? `この使い方だと、${result.saleAge}歳ごろに預貯金・証券が尽きます。それまでに不動産を売却すると、手元に残る約${formatMan(result.saleProceeds)}で${input.lifeExpectancy}歳まで暮らせる計算です。`
-              : `${result.saleAge}歳ごろに預貯金・証券が尽きる見込みです。それまでに不動産の売却を考えましょう。`}
+            {result.cashRunOutAge !== null &&
+              `${result.extraAnnualSpend > 0 ? "この使い方だと、" : ""}${result.cashRunOutAge}歳ごろに預貯金・証券が尽きる見込みです。売却には時間がかかることもあるため、${saleWindow}までに売却しておくと安心です。`}
+            {result.extraAnnualSpend > 0 &&
+              `${result.saleAge}歳で売却すると、手元に残る約${formatMan(result.saleProceeds)}で${input.lifeExpectancy}歳まで暮らせる計算です。`}
           </p>
           <p className="mt-3 border-t border-ink/10 pt-3 text-sm">
             {result.extraAnnualSpendWithoutSale > 0
