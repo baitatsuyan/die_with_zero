@@ -6,6 +6,8 @@ export type QuickFieldKey =
   | "currentAge"
   | "financialAssets"
   | "realEstateValue"
+  | "relocationCost"
+  | "monthlyHousingAfterSale"
   | "monthlyPension"
   | "monthlyOtherIncome"
   | "otherIncomeEndAge"
@@ -63,6 +65,30 @@ export const QUICK_FIELDS: QuickField[] = [
     presets: [0, 1000, 2000, 3000, 5000],
   },
   {
+    key: "relocationCost",
+    label: "住み替えの一時費用",
+    question: "売ったあとに住み替えるとき、最初にかかる費用はどれくらいですか？",
+    hint: "引越し・賃貸の初期費用なら100〜200万円、住まいを買うなら購入費、高齢者住宅なら入居一時金が目安です",
+    unit: "万円",
+    min: 0,
+    max: 100000,
+    step: 10,
+    presets: [100, 200, 500, 1000, 2000],
+    showIf: (input) => input.realEstateValue > 0,
+  },
+  {
+    key: "monthlyHousingAfterSale",
+    label: "売却後の住居費（月額）",
+    question: "住み替えたあと、毎月の住居費はどれくらいかかりそうですか？",
+    hint: "家賃や管理費など。いまの生活費に上乗せして計算します。買い替えでローンがなければ管理費程度で大丈夫です",
+    unit: "万円",
+    min: 0,
+    max: 100,
+    step: 1,
+    presets: [0, 3, 5, 8, 12],
+    showIf: (input) => input.realEstateValue > 0,
+  },
+  {
     key: "monthlyPension",
     label: "年金の見込み（月額）",
     question: "年金は、月にいくらくらい受け取れそうですか？",
@@ -100,7 +126,7 @@ export const QUICK_FIELDS: QuickField[] = [
     key: "monthlyLivingCost",
     label: "毎月の生活費",
     question: "毎月の生活費は、どれくらいですか？",
-    hint: "住居費を含めた平均",
+    hint: "いまの住まいの住居費を含めた平均",
     unit: "万円",
     min: 5,
     max: 100,

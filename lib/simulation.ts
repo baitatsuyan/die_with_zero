@@ -5,6 +5,8 @@ export type QuickInput = {
   lifeExpectancy: number; // 初期値 90
   financialAssets: number; // 現預金＋証券の合計
   realEstateValue: number; // 不動産の時価の合計（現金が尽きる年までに売却する前提）
+  relocationCost: number; // 売却時の住み替えの一時費用（引越し・賃貸の初期費用・購入費・入居一時金など）
+  monthlyHousingAfterSale: number; // 売却後の住居費（月額）：家賃・管理費など
   monthlyPension: number; // 年金見込み（月額）
   pensionStartAge: number; // 初期値 65
   monthlyOtherIncome: number; // 年金以外の収入（月額）：就労収入・家賃収入など
@@ -25,7 +27,7 @@ export type QuickResult = {
   extraAnnualSpendWithoutSale: number; // 不動産を売らずに暮らす場合の毎年あと使える額
   saleAge: number | null; // 売却期限（現金が尽きる年の SALE_LEAD_YEARS 年前）。計算もこの年齢で売却した場合
   cashRunOutAge: number | null; // 売却しなければ現金が尽きる年齢
-  saleProceeds: number; // 売却で手元に残る額の目安（諸費用・税を簡易控除）
+  saleProceeds: number; // 売却で手元に残る額の目安（諸費用・税と住み替えの一時費用を差し引いた額）
   cashDepletionAge: number | null; // 追加支出なし・売却なしで現金が尽きる年齢
   depletionAge: number | null; // 追加支出なしで、売却しても資産が尽きる年齢
 };
@@ -41,6 +43,8 @@ export const DEFAULT_QUICK_INPUT: QuickInput = {
   lifeExpectancy: 90,
   financialAssets: 5000,
   realEstateValue: 2350,
+  relocationCost: 200,
+  monthlyHousingAfterSale: 8,
   monthlyPension: 22,
   pensionStartAge: 65,
   monthlyOtherIncome: 0,
@@ -53,10 +57,15 @@ export const DEFAULT_QUICK_INPUT: QuickInput = {
 
 export type Simulation = { path: YearPoint[]; saleAge: number | null; cashRunOutAge: number | null };
 
+/** 売却で手元に残る額：時価から諸費用・税（1割）と住み替えの一時費用を差し引いた額。 */
+export function netSaleProceeds(input: QuickInput): number {
+  return input.realEstateValue * (1 - SALE_COST_RATE) - input.relocationCost;
+}
+
 /** 年単位で現金（預貯金・証券）の残高を推移計算する。saleAt の年齢になった時点で不動産を売却する。 */
 function runCashFlow(input: QuickInput, extraAnnualSpend: number, saleAt: number | "whenNeeded" | null) {
   const path: YearPoint[] = [{ age: input.currentAge, balance: input.financialAssets }];
-  const proceeds = input.realEstateValue * (1 - SALE_COST_RATE);
+  const proceeds = netSaleProceeds(input);
   let balance = input.financialAssets;
   let soldAt: number | null = null;
   for (let age = input.currentAge; age < input.lifeExpectancy; age++) {
@@ -65,8 +74,11 @@ function runCashFlow(input: QuickInput, extraAnnualSpend: number, saleAt: number
     const otherIncome = age < input.otherIncomeEndAge ? input.monthlyOtherIncome * 12 : 0;
     const income = pension + otherIncome;
     const livingCost = input.monthlyLivingCost * 12 * Math.pow(1 + input.inflationRate, yearsFromNow);
+    // 売却した翌年から、住み替え先の住居費がかかる
+    const housingAfterSale =
+      soldAt !== null ? input.monthlyHousingAfterSale * 12 * Math.pow(1 + input.inflationRate, yearsFromNow) : 0;
     const investmentGain = balance > 0 ? balance * input.expectedReturn : 0;
-    balance = balance + income - livingCost - extraAnnualSpend + investmentGain;
+    balance = balance + income - livingCost - housingAfterSale - extraAnnualSpend + investmentGain;
     const sellNow = saleAt === "whenNeeded" ? balance < 0 : saleAt === age + 1;
     if (soldAt === null && sellNow && input.realEstateValue > 0) {
       balance += proceeds;
@@ -83,7 +95,8 @@ function runCashFlow(input: QuickInput, extraAnnualSpend: number, saleAt: number
  * 売却額（諸費用・税を差し引いた額）を現金に加える。
  */
 export function simulatePlan(input: QuickInput, extraAnnualSpend = 0, allowSale = false): Simulation {
-  if (!allowSale || input.realEstateValue <= 0) {
+  // 住み替え費用が売却額を上回るなら、売っても資金は増えないので売却しない
+  if (!allowSale || input.realEstateValue <= 0 || netSaleProceeds(input) <= 0) {
     return { path: runCashFlow(input, extraAnnualSpend, null).path, saleAge: null, cashRunOutAge: null };
   }
   const cashRunOutAge = runCashFlow(input, extraAnnualSpend, "whenNeeded").soldAt;
@@ -119,7 +132,7 @@ export function findExtraAnnualSpend(input: QuickInput, allowSale = false): numb
 const firstNegativeAge = (path: YearPoint[]) => path.find((p) => p.balance < 0)?.age ?? null;
 
 export function runQuickDiagnosis(input: QuickInput): QuickResult {
-  const hasRealEstate = input.realEstateValue > 0;
+  const hasRealEstate = input.realEstateValue > 0 && netSaleProceeds(input) > 0;
   const base = simulatePlan(input, 0, true);
   const extraAnnualSpendWithoutSale = findExtraAnnualSpend(input, false);
   const extraAnnualSpend = hasRealEstate ? findExtraAnnualSpend(input, true) : extraAnnualSpendWithoutSale;
@@ -133,7 +146,7 @@ export function runQuickDiagnosis(input: QuickInput): QuickResult {
     // 使える額が0のとき（使い切りプランが組めないとき）は、追加支出なしで現金が尽きる年が売却の期限
     saleAge: extraAnnualSpend > 0 ? planned.saleAge : base.saleAge,
     cashRunOutAge: extraAnnualSpend > 0 ? planned.cashRunOutAge : base.cashRunOutAge,
-    saleProceeds: input.realEstateValue * (1 - SALE_COST_RATE),
+    saleProceeds: netSaleProceeds(input),
     cashDepletionAge: firstNegativeAge(simulate(input)),
     depletionAge: firstNegativeAge(base.path),
   };

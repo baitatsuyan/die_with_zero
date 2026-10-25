@@ -82,7 +82,7 @@ export function QuickResultPanel({ input, result, action }: Props) {
             {result.cashRunOutAge !== null &&
               `${result.extraAnnualSpend > 0 ? "この使い方だと、" : ""}${result.cashRunOutAge}歳ごろに預貯金・証券が尽きる見込みです。売却には時間がかかることもあるため、${saleWindow}までに売却しておくと安心です。`}
             {result.extraAnnualSpend > 0 &&
-              `${result.saleAge}歳で売却すると、手元に残る約${formatMan(result.saleProceeds)}で${input.lifeExpectancy}歳まで暮らせる計算です。`}
+              `${result.saleAge}歳で売却すると、住み替えの一時費用を差し引いて約${formatMan(result.saleProceeds)}が手元に残り、住み替え先の住居費（月${formatMan(input.monthlyHousingAfterSale)}）を払いながら${input.lifeExpectancy}歳まで暮らせる計算です。`}
           </p>
           <p className="mt-3 border-t border-ink/10 pt-3 text-sm">
             {result.extraAnnualSpendWithoutSale > 0
@@ -91,13 +91,26 @@ export function QuickResultPanel({ input, result, action }: Props) {
                 ? `売らない場合は、${result.cashDepletionAge}歳で預貯金・証券が尽きます。`
                 : "売らない場合は、上乗せして使える余裕はありません。"}
           </p>
-          <p className="mt-2 text-xs text-muted">売却額は、諸費用・税の目安として1割を差し引いて計算しています。</p>
+          <p className="mt-2 text-xs text-muted">
+            売却額{formatMan(input.realEstateValue)}から、諸費用・税の目安として1割と、住み替えの一時費用{formatMan(input.relocationCost)}を差し引いています。
+          </p>
         </div>
       )}
       {hasRealEstate && result.saleAge === null && (
         <div className="rounded-2xl bg-white/10 p-5">
-          <p className="font-bold">不動産は売らなくても足りる見込みです</p>
-          <p className="mt-1 text-sm text-white/80">{input.lifeExpectancy}歳まで、預貯金・証券だけで暮らせる計算です。</p>
+          {result.saleProceeds <= 0 ? (
+            <>
+              <p className="font-bold">売却しても手元の資金は増えない見込みです</p>
+              <p className="mt-1 text-sm text-white/80">
+                住み替えの一時費用が、売却で手元に残る額を上回るため、売却は計画に入れていません。
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-bold">不動産は売らなくても足りる見込みです</p>
+              <p className="mt-1 text-sm text-white/80">{input.lifeExpectancy}歳まで、預貯金・証券だけで暮らせる計算です。</p>
+            </>
+          )}
         </div>
       )}
 
