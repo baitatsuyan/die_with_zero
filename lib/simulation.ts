@@ -4,8 +4,11 @@ export type QuickInput = {
   currentAge: number;
   lifeExpectancy: number; // 初期値 90
   financialAssets: number; // 現預金＋証券の合計
+  realEstateValue: number; // 不動産の時価の合計（売らずに持ち続ける前提で、取り崩しには使わない）
   monthlyPension: number; // 年金見込み（月額）
   pensionStartAge: number; // 初期値 65
+  monthlyOtherIncome: number; // 年金以外の収入（月額）：就労収入・家賃収入など
+  otherIncomeEndAge: number; // 年金以外の収入を受け取る最後の年齢
   monthlyLivingCost: number; // 毎月の生活費
   safetyMargin: number; // 最期に残す最低額（医療・介護の予備費）
   expectedReturn: number; // 金融資産の想定利回り（年率）
@@ -26,8 +29,11 @@ export const DEFAULT_QUICK_INPUT: QuickInput = {
   currentAge: 60,
   lifeExpectancy: 90,
   financialAssets: 5000,
+  realEstateValue: 2350,
   monthlyPension: 22,
   pensionStartAge: 65,
+  monthlyOtherIncome: 0,
+  otherIncomeEndAge: 65,
   monthlyLivingCost: 26,
   safetyMargin: 500,
   expectedReturn: 0.02,
@@ -40,7 +46,9 @@ export function simulate(input: QuickInput, extraAnnualSpend = 0): YearPoint[] {
   let balance = input.financialAssets;
   for (let age = input.currentAge; age < input.lifeExpectancy; age++) {
     const yearsFromNow = age - input.currentAge;
-    const income = age >= input.pensionStartAge ? input.monthlyPension * 12 : 0;
+    const pension = age >= input.pensionStartAge ? input.monthlyPension * 12 : 0;
+    const otherIncome = age < input.otherIncomeEndAge ? input.monthlyOtherIncome * 12 : 0;
+    const income = pension + otherIncome;
     const livingCost = input.monthlyLivingCost * 12 * Math.pow(1 + input.inflationRate, yearsFromNow);
     const investmentGain = balance > 0 ? balance * input.expectedReturn : 0;
     balance = balance + income - livingCost - extraAnnualSpend + investmentGain;

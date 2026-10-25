@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { formatAxisMan } from "@/lib/format";
 import type { YearPoint } from "@/lib/simulation";
 
 type Props = {
@@ -55,7 +56,7 @@ export function BalanceChart({ path, plannedPath, safetyMargin }: Props) {
           <g key={t}>
             <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} stroke="var(--color-line)" strokeWidth={1} />
             <text x={PAD.left - 6} y={y(t) + 4} textAnchor="end" fontSize={FONT_SIZE} fill="var(--color-muted)">
-              {t.toLocaleString()}
+              {formatAxisMan(t)}
             </text>
           </g>
         ))}

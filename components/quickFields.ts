@@ -1,6 +1,16 @@
-// かんたん診断の5つの質問。LPの埋め込み版と /quick の質問形式で共有する。
+// かんたん診断の質問。LPの埋め込み版と /quick の質問形式で共有する。
 
-export type QuickFieldKey = "currentAge" | "financialAssets" | "monthlyPension" | "monthlyLivingCost" | "safetyMargin";
+import type { QuickInput } from "@/lib/simulation";
+
+export type QuickFieldKey =
+  | "currentAge"
+  | "financialAssets"
+  | "realEstateValue"
+  | "monthlyPension"
+  | "monthlyOtherIncome"
+  | "otherIncomeEndAge"
+  | "monthlyLivingCost"
+  | "safetyMargin";
 
 export type QuickField = {
   key: QuickFieldKey;
@@ -12,7 +22,11 @@ export type QuickField = {
   max: number;
   step: number;
   presets: number[]; // 質問形式でワンタップで選べる候補
+  showIf?: (input: QuickInput) => boolean; // 条件に合うときだけ質問する
 };
+
+/** いまの回答で表示する質問だけを返す。 */
+export const visibleQuickFields = (input: QuickInput) => QUICK_FIELDS.filter((f) => !f.showIf || f.showIf(input));
 
 export const QUICK_FIELDS: QuickField[] = [
   {
@@ -33,9 +47,20 @@ export const QUICK_FIELDS: QuickField[] = [
     hint: "ざっくりで大丈夫です",
     unit: "万円",
     min: 0,
-    max: 30000,
+    max: 100000,
     step: 100,
     presets: [1000, 2000, 3000, 5000, 10000],
+  },
+  {
+    key: "realEstateValue",
+    label: "不動産の合計",
+    question: "自宅や実家などの不動産は、合わせていくらくらいですか？",
+    hint: "売ったらいくらになりそうかの目安。持ち続ける前提で、生活費の取り崩しには使いません",
+    unit: "万円",
+    min: 0,
+    max: 100000,
+    step: 100,
+    presets: [0, 1000, 2000, 3000, 5000],
   },
   {
     key: "monthlyPension",
@@ -44,9 +69,32 @@ export const QUICK_FIELDS: QuickField[] = [
     hint: "ご夫婦の合計。65歳から受給として計算",
     unit: "万円",
     min: 0,
-    max: 60,
+    max: 100,
     step: 1,
     presets: [15, 20, 22, 25, 30],
+  },
+  {
+    key: "monthlyOtherIncome",
+    label: "年金以外の収入（月額）",
+    question: "年金以外の収入は、月にいくらくらいありますか？",
+    hint: "働いて得る収入や家賃収入など。なければ0のままで大丈夫です",
+    unit: "万円",
+    min: 0,
+    max: 1000,
+    step: 1,
+    presets: [0, 5, 10, 20, 30],
+  },
+  {
+    key: "otherIncomeEndAge",
+    label: "年金以外の収入は何歳まで",
+    question: "その収入は、何歳まで続きそうですか？",
+    hint: "家賃収入などずっと続く場合は90歳に",
+    unit: "歳",
+    min: 40,
+    max: 100,
+    step: 1,
+    presets: [65, 70, 75, 80, 90],
+    showIf: (input) => input.monthlyOtherIncome > 0,
   },
   {
     key: "monthlyLivingCost",

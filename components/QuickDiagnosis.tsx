@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { QuickResultPanel } from "@/components/QuickResultPanel";
-import { QUICK_FIELDS, type QuickFieldKey } from "@/components/quickFields";
+import { visibleQuickFields, type QuickFieldKey } from "@/components/quickFields";
 import { DEFAULT_QUICK_INPUT, runQuickDiagnosis, type QuickInput } from "@/lib/simulation";
 
 export function QuickDiagnosis() {
@@ -17,9 +17,9 @@ export function QuickDiagnosis() {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
       <form className="rounded-3xl border border-line bg-white p-6 shadow-sm md:p-8" onSubmit={(e) => e.preventDefault()}>
-        <p className="mb-6 text-sm font-bold text-pine">5つの質問・約1分</p>
+        <p className="mb-6 text-sm font-bold text-pine">かんたんな質問・約1分</p>
         <div className="space-y-6">
-          {QUICK_FIELDS.map((f, i) => (
+          {visibleQuickFields(input).map((f, i) => (
             <div key={f.key}>
               <label htmlFor={f.key} className="flex items-baseline gap-2 font-bold">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-pine-soft text-sm text-pine">

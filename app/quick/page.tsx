@@ -4,7 +4,7 @@ import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 
 export const metadata: Metadata = {
   title: "かんたん診断｜使い切りプランナー",
-  description: "5つの質問に答えるだけで、人生後半に「毎年あと使える額」の目安が分かります。",
+  description: "いくつかの質問に答えるだけで、人生後半に「毎年あと使える額」の目安が分かります。",
 };
 
 export default function QuickPage() {

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { QuickResultPanel } from "@/components/QuickResultPanel";
-import { QUICK_FIELDS } from "@/components/quickFields";
+import { QUICK_FIELDS, visibleQuickFields } from "@/components/quickFields";
 import { DEFAULT_QUICK_INPUT, runQuickDiagnosis, type QuickInput } from "@/lib/simulation";
 
 const STORAGE_KEY = "quick-diagnosis-input";
@@ -45,14 +45,16 @@ export function QuickWizard() {
     window.scrollTo({ top: 0 });
   }, [step]);
 
-  const isResult = step >= QUICK_FIELDS.length;
-  const field = QUICK_FIELDS[Math.min(step, QUICK_FIELDS.length - 1)];
+  const fields = visibleQuickFields(input);
+  const isResult = step >= fields.length;
+  const field = fields[Math.min(step, fields.length - 1)];
   const value = Number(draft);
   const valid = draft.trim() !== "" && Number.isFinite(value) && value >= field.min && value <= field.max;
 
   const goTo = (next: number, current: QuickInput = input) => {
+    const currentFields = visibleQuickFields(current);
     setStep(next);
-    if (next < QUICK_FIELDS.length) setDraft(String(current[QUICK_FIELDS[next].key]));
+    if (next < currentFields.length) setDraft(String(current[currentFields[next].key]));
   };
 
   const submit = (e?: React.FormEvent) => {
@@ -60,7 +62,7 @@ export function QuickWizard() {
     if (!valid) return;
     const next = { ...input, [field.key]: value };
     setInput(next);
-    if (step + 1 >= QUICK_FIELDS.length) saveInput(next);
+    if (step + 1 >= visibleQuickFields(next).length) saveInput(next);
     goTo(step + 1, next);
   };
 
@@ -82,7 +84,7 @@ export function QuickWizard() {
             </button>
           </div>
           <dl className="mt-4 divide-y divide-line/70">
-            {QUICK_FIELDS.map((f, i) => (
+            {fields.map((f, i) => (
               <div key={f.key} className="flex items-center justify-between gap-4 py-3">
                 <dt className="text-muted">{f.label}</dt>
                 <dd className="flex shrink-0 items-center gap-4 whitespace-nowrap">
@@ -117,10 +119,10 @@ export function QuickWizard() {
   }
 
   return (
-    <form onSubmit={submit} className="mx-auto max-w-2xl">
+    <form onSubmit={submit} noValidate className="mx-auto max-w-2xl">
       <div className="flex items-center justify-between text-sm font-bold text-muted">
         <span>
-          質問 {step + 1} / {QUICK_FIELDS.length}
+          質問 {step + 1} / {fields.length}
         </span>
         <span>約1分</span>
       </div>
@@ -128,10 +130,10 @@ export function QuickWizard() {
         className="mt-2 h-2 overflow-hidden rounded-full bg-sand"
         role="progressbar"
         aria-valuemin={0}
-        aria-valuemax={QUICK_FIELDS.length}
+        aria-valuemax={fields.length}
         aria-valuenow={step}
       >
-        <div className="h-full rounded-full bg-pine transition-all" style={{ width: `${(step / QUICK_FIELDS.length) * 100}%` }} />
+        <div className="h-full rounded-full bg-pine transition-all" style={{ width: `${(step / fields.length) * 100}%` }} />
       </div>
 
       <div className="mt-10 rounded-3xl border border-line bg-white p-6 shadow-sm md:p-10">
@@ -195,7 +197,7 @@ export function QuickWizard() {
           disabled={!valid}
           className="flex-1 rounded-full bg-sun px-6 py-4 text-lg font-bold text-ink shadow-md transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {step + 1 === QUICK_FIELDS.length ? "結果を見る" : "次へ"}
+          {step + 1 >= visibleQuickFields({ ...input, [field.key]: valid ? value : input[field.key] }).length ? "結果を見る" : "次へ"}
         </button>
       </div>
       <p className="mt-6 text-center text-xs text-muted">

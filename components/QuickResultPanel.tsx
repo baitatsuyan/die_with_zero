@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { BalanceChart } from "@/components/BalanceChart";
+import { formatMan } from "@/lib/format";
 import type { QuickInput, QuickResult } from "@/lib/simulation";
 
 const man = (v: number) => Math.round(v).toLocaleString();
@@ -19,7 +20,7 @@ export function QuickResultPanel({ input, result, action }: Props) {
   const extraMonthly = result.extraAnnualSpend / 12;
   const shareText =
     result.extraAnnualSpend > 0
-      ? `私は毎年あと約${man(result.extraAnnualSpend)}万円使えるみたい。あなたが使い切れる額は？ #使い切りプランナー`
+      ? `私は毎年あと約${formatMan(result.extraAnnualSpend)}使えるみたい。あなたが使い切れる額は？ #使い切りプランナー`
       : "人生後半のお金、いくら使えるか試算してみました。 #使い切りプランナー";
 
   const share = async () => {
@@ -47,8 +48,8 @@ export function QuickResultPanel({ input, result, action }: Props) {
             <span className="ml-2 text-2xl">万円</span>
           </p>
           <p className="mt-3 text-white/85">
-            月にすると約<strong className="text-sun-soft">{man(extraMonthly)}万円</strong>。
-            旅行や趣味、家族との時間に使っても、{input.lifeExpectancy}歳で{man(input.safetyMargin)}万円が残る計算です。
+            月にすると約<strong className="text-sun-soft">{formatMan(extraMonthly)}</strong>。
+            旅行や趣味、家族との時間に使っても、{input.lifeExpectancy}歳で{formatMan(input.safetyMargin)}が残る計算です。
           </p>
         </div>
       ) : (
@@ -84,14 +85,23 @@ export function QuickResultPanel({ input, result, action }: Props) {
       <dl className="grid grid-cols-2 gap-3 text-sm">
         <div className="rounded-2xl bg-white/10 p-4">
           <dt className="text-white/75">何も使わないと最期に残る額</dt>
-          <dd className="mt-1 text-xl font-bold whitespace-nowrap tabular-nums md:text-2xl">{result.finalBalance < 0 ? "不足" : `${man(result.finalBalance)}万円`}</dd>
+          <dd className="mt-1 text-xl font-bold whitespace-nowrap tabular-nums md:text-2xl">{result.finalBalance < 0 ? "不足" : formatMan(result.finalBalance)}</dd>
         </div>
         <div className="rounded-2xl bg-white/10 p-4">
           <dt className="text-white/75">{input.lifeExpectancy}歳までに使える合計</dt>
           <dd className="mt-1 text-xl font-bold whitespace-nowrap tabular-nums md:text-2xl">
-            {man(result.extraAnnualSpend * (input.lifeExpectancy - input.currentAge))}万円
+            {formatMan(result.extraAnnualSpend * (input.lifeExpectancy - input.currentAge))}
           </dd>
         </div>
+        {input.realEstateValue > 0 && (
+          <div className="col-span-2 rounded-2xl bg-white/10 p-4">
+            <dt className="text-white/75">不動産（{formatMan(input.realEstateValue)}）も含めて最期に残る資産</dt>
+            <dd className="mt-1 text-xl font-bold whitespace-nowrap tabular-nums md:text-2xl">
+              {formatMan(Math.max(0, result.plannedPath[result.plannedPath.length - 1].balance) + input.realEstateValue)}
+            </dd>
+            <p className="mt-1 text-xs text-white/70">不動産は売らずに持ち続ける前提で計算しています。</p>
+          </div>
+        )}
       </dl>
 
       <div className="mt-auto flex flex-col gap-3 sm:flex-row">

@@ -13,7 +13,7 @@ const PROBLEMS = [
 
 // 詳細診断の入力例。金融資産まわりはかんたん診断の初期値と同じ前提で計算する。
 const EXAMPLE_RESULT = runQuickDiagnosis(DEFAULT_QUICK_INPUT);
-const EXAMPLE_HOUSE_VALUE = 2350; // 実家の推定時価（万円）
+const EXAMPLE_HOUSE_VALUE = DEFAULT_QUICK_INPUT.realEstateValue; // 実家の推定時価（万円）
 const EXAMPLE_FINAL_BALANCE = EXAMPLE_RESULT.plannedPath[EXAMPLE_RESULT.plannedPath.length - 1].balance;
 const EXAMPLE_ESTATE = EXAMPLE_FINAL_BALANCE + EXAMPLE_HOUSE_VALUE;
 const EXAMPLE_TAX = calculateInheritanceTax({
