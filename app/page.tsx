@@ -1,4 +1,5 @@
 import { QuickDiagnosis } from "@/components/QuickDiagnosis";
+import { calculateInheritanceTax } from "@/lib/inheritanceTax";
 import { DEFAULT_QUICK_INPUT, runQuickDiagnosis, type YearPoint } from "@/lib/simulation";
 
 const PROBLEMS = [
@@ -11,18 +12,29 @@ const PROBLEMS = [
 // 詳細診断の入力例。金融資産まわりはかんたん診断の初期値と同じ前提で計算する。
 const EXAMPLE_RESULT = runQuickDiagnosis(DEFAULT_QUICK_INPUT);
 const EXAMPLE_HOUSE_VALUE = 2350; // 実家の推定時価（万円）
-const EXAMPLE_HEIRS = 3; // 配偶者と子2人
-const EXAMPLE_BASIC_DEDUCTION = 3000 + 600 * EXAMPLE_HEIRS;
 const EXAMPLE_FINAL_BALANCE = EXAMPLE_RESULT.plannedPath[EXAMPLE_RESULT.plannedPath.length - 1].balance;
 const EXAMPLE_ESTATE = EXAMPLE_FINAL_BALANCE + EXAMPLE_HOUSE_VALUE;
+const EXAMPLE_TAX = calculateInheritanceTax({
+  estate: EXAMPLE_ESTATE,
+  liabilities: 0,
+  deathBenefit: 0,
+  hasSpouse: true,
+  childrenCount: 2,
+});
 const fmt = (v: number) => Math.round(v).toLocaleString();
 
 const OUTPUTS = [
   { label: "毎年あと使える額", value: fmt(EXAMPLE_RESULT.extraAnnualSpend), unit: "万円/年", note: "最期に残したい額を守ったうえで" },
   { label: "最期に残る見込み額", value: fmt(EXAMPLE_FINAL_BALANCE), unit: "万円", note: `${DEFAULT_QUICK_INPUT.lifeExpectancy}歳時点・使い切りプランの場合` },
-  EXAMPLE_ESTATE <= EXAMPLE_BASIC_DEDUCTION
-    ? { label: "相続税の目安", value: "0", unit: "円", note: `遺産${fmt(EXAMPLE_ESTATE)}万円は基礎控除 ${fmt(EXAMPLE_BASIC_DEDUCTION)}万円の範囲内` }
-    : { label: "相続税の目安", value: "要確認", unit: "", note: `遺産${fmt(EXAMPLE_ESTATE)}万円が基礎控除 ${fmt(EXAMPLE_BASIC_DEDUCTION)}万円を超えます` },
+  {
+    label: "相続税の目安",
+    value: EXAMPLE_TAX.payableTax > 0 ? fmt(EXAMPLE_TAX.payableTax) : "0",
+    unit: EXAMPLE_TAX.payableTax > 0 ? "万円" : "円",
+    note:
+      EXAMPLE_TAX.taxableEstate > 0
+        ? `遺産${fmt(EXAMPLE_ESTATE)}万円・配偶者の税額軽減後`
+        : `遺産${fmt(EXAMPLE_ESTATE)}万円は基礎控除 ${fmt(EXAMPLE_TAX.basicDeduction)}万円の範囲内`,
+  },
   { label: "実家の推定時価", value: fmt(EXAMPLE_HOUSE_VALUE), unit: "万円", note: "周辺の取引 38件から推定" },
 ];
 
@@ -366,7 +378,7 @@ function HeroCard() {
         <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
           <div className="rounded-xl bg-cream p-3">
             <p className="text-muted">相続税の目安</p>
-            <p className="text-lg font-bold">かからない見込み</p>
+            <p className="text-lg font-bold">{EXAMPLE_TAX.payableTax > 0 ? `約${fmt(EXAMPLE_TAX.payableTax)}万円` : "かからない見込み"}</p>
           </div>
           <div className="rounded-xl bg-cream p-3">
             <p className="text-muted">資産整理</p>
