@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex" />
+    <title>forms</title>
+  </head>
+  <body>
+    <!--
+      Netlify Forms がデプロイ時にフォームを見つけるための定義。
+      画面のフォーム（components/ConsultForm.tsx）は、この名前と項目でこのファイルに送信する。
+    -->
+    <form name="sale-consultation" data-netlify="true" netlify-honeypot="bot-field" hidden>
+      <input type="hidden" name="form-name" value="sale-consultation" />
+      <input name="bot-field" />
+      <input name="name" />
+      <input name="email" type="email" />
+      <input name="phone" />
+      <input name="location" />
+      <input name="propertyType" />
+      <input name="estimatedValue" />
+      <input name="timing" />
+      <input name="diagnosis" />
+      <input name="topics" />
+      <textarea name="message"></textarea>
+      <input name="agreed" />
+    </form>
+  </body>
+</html>

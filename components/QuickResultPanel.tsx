@@ -32,7 +32,7 @@ export function QuickResultPanel({ input, result, action }: Props) {
       : "人生後半のお金、いくら使えるか試算してみました。 #使い切りプランナー";
 
   const share = async () => {
-    const url = typeof window !== "undefined" ? `${window.location.origin}${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/quick/` : "";
+    const url = typeof window !== "undefined" ? `${window.location.origin}/quick` : "";
     try {
       if (navigator.share) {
         await navigator.share({ text: shareText, url });
@@ -94,6 +94,14 @@ export function QuickResultPanel({ input, result, action }: Props) {
           <p className="mt-2 text-xs text-muted">
             売却額{formatMan(input.realEstateValue)}から、諸費用・税の目安として1割と、住み替えの一時費用{formatMan(input.relocationCost)}を差し引いています。
           </p>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:gap-5">
+            <Link href="/consult" className="font-bold text-pine hover:underline">
+              売却・住み替えを相談する →
+            </Link>
+            <Link href="/properties" className="font-bold text-pine hover:underline">
+              いまの時価を調べる →
+            </Link>
+          </div>
         </div>
       )}
       {hasRealEstate && result.saleAge === null && (

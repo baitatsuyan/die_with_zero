@@ -5,25 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { QuickResultPanel } from "@/components/QuickResultPanel";
 import { QUICK_FIELDS, visibleQuickFields } from "@/components/quickFields";
 import { DEFAULT_QUICK_INPUT, runQuickDiagnosis, type QuickInput } from "@/lib/simulation";
-
-const STORAGE_KEY = "quick-diagnosis-input";
-
-function loadSavedInput(): Partial<QuickInput> | null {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Partial<QuickInput>) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveInput(input: QuickInput) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(input));
-  } catch {
-    // 保存できない環境（プライベートブラウズなど）では何もしない
-  }
-}
+import { loadJSON, saveJSON, STORAGE_KEYS } from "@/lib/storage";
 
 /** かんたん診断を1問ずつ答える形式。最後に結果を表示する。 */
 export function QuickWizard() {
@@ -34,7 +16,7 @@ export function QuickWizard() {
 
   // 前回の回答があれば、初期値として使う
   useEffect(() => {
-    const saved = loadSavedInput();
+    const saved = loadJSON<Partial<QuickInput>>(STORAGE_KEYS.quickInput);
     if (!saved) return;
     const merged = { ...DEFAULT_QUICK_INPUT, ...saved };
     setInput(merged);
@@ -62,7 +44,7 @@ export function QuickWizard() {
     if (!valid) return;
     const next = { ...input, [field.key]: value };
     setInput(next);
-    if (step + 1 >= visibleQuickFields(next).length) saveInput(next);
+    if (step + 1 >= visibleQuickFields(next).length) saveJSON(STORAGE_KEYS.quickInput, next);
     goTo(step + 1, next);
   };
 
@@ -141,6 +123,11 @@ export function QuickWizard() {
           {field.question}
         </label>
         {field.hint && <p className="mt-2 text-muted">{field.hint}</p>}
+        {field.helpLink && (
+          <Link href={field.helpLink.href} className="mt-2 inline-block font-bold text-pine hover:underline">
+            {field.helpLink.label} →
+          </Link>
+        )}
 
         <div className="mt-8 flex items-center gap-3">
           <input

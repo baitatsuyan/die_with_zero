@@ -38,12 +38,14 @@ const OUTPUTS = [
       EXAMPLE_TAX.taxableEstate > 0
         ? `遺産${fmt(EXAMPLE_ESTATE)}万円・配偶者の税額軽減後`
         : `遺産${fmt(EXAMPLE_ESTATE)}万円は基礎控除 ${fmt(EXAMPLE_TAX.basicDeduction)}万円の範囲内`,
+    link: { href: "/inheritance", label: "自分の家族で試算する" },
   },
   {
     label: "実家の推定時価",
     value: fmt(EXAMPLE_HOUSE_VALUE),
     unit: "万円",
     note: EXAMPLE_SALE_AGE !== null ? `周辺の取引 38件から推定・${EXAMPLE_SALE_AGE}歳までに売却する計画` : "周辺の取引 38件から推定",
+    link: { href: "/properties", label: "自分の不動産を調べる" },
   },
 ];
 
@@ -177,9 +179,9 @@ export default function Home() {
                     <span className="ml-1 text-base">{o.unit}</span>
                   </p>
                   <p className="mt-3 text-xs text-muted">{o.note}</p>
-                  {o.label === "相続税の目安" && (
-                    <Link href="/inheritance" className="mt-3 inline-block text-sm font-bold text-pine hover:underline">
-                      自分の家族で試算する →
+                  {o.link && (
+                    <Link href={o.link.href} className="mt-3 inline-block text-sm font-bold text-pine hover:underline">
+                      {o.link.label} →
                     </Link>
                   )}
                 </div>

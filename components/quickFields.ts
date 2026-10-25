@@ -25,6 +25,7 @@ export type QuickField = {
   step: number;
   presets: number[]; // 質問形式でワンタップで選べる候補
   showIf?: (input: QuickInput) => boolean; // 条件に合うときだけ質問する
+  helpLink?: { href: string; label: string }; // 質問形式で答え方の助けになるページ
 };
 
 /** いまの回答で表示する質問だけを返す。 */
@@ -63,6 +64,7 @@ export const QUICK_FIELDS: QuickField[] = [
     max: 100000,
     step: 100,
     presets: [0, 1000, 2000, 3000, 5000],
+    helpLink: { href: "/properties", label: "いくらか分からない場合は、取引事例から推定できます" },
   },
   {
     key: "relocationCost",

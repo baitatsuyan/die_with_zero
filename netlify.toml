@@ -1,0 +1,8 @@
+# Netlify のビルド設定。Next.js は Netlify が自動で検出し、サーバー機能も含めてデプロイする。
+# 不動産情報ライブラリの APIキーは、Netlify の環境変数 REINFOLIB_API_KEY に設定する（リポジトリには置かない）。
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
