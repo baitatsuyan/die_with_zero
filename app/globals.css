@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #fbf7f0;
+  --color-sand: #f1e8da;
+  --color-ink: #1f2a2e;
+  --color-muted: #5b6669;
+  --color-line: #e2d8c8;
+  --color-pine: #0f5c55;
+  --color-pine-dark: #0a443f;
+  --color-pine-soft: #e3efec;
+  --color-sun: #e8913a;
+  --color-sun-soft: #fcebd9;
+  --color-alert: #b4452f;
+  --font-sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif;
+}
+
+html {
+  font-size: 17px;
+  scroll-behavior: smooth;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 18px;
+  }
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  line-height: 1.8;
+}
