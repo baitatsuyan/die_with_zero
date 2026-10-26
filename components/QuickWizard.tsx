@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { QuickResultPanel } from "@/components/QuickResultPanel";
 import { QUICK_FIELDS, visibleQuickFields } from "@/components/quickFields";
 import { DEFAULT_QUICK_INPUT, runQuickDiagnosis, type QuickInput } from "@/lib/simulation";
+import { sanitizeDigits } from "@/lib/numberText";
 import { loadJSON, saveJSON, STORAGE_KEYS } from "@/lib/storage";
 
 /** かんたん診断を1問ずつ答える形式。最後に結果を表示する。 */
@@ -133,14 +134,12 @@ export function QuickWizard() {
           <input
             id="answer"
             key={field.key}
-            type="number"
+            type="text"
             inputMode="numeric"
+            autoComplete="off"
             autoFocus
-            min={field.min}
-            max={field.max}
-            step={field.step}
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => setDraft(sanitizeDigits(e.target.value))}
             aria-invalid={!valid}
             aria-describedby="answer-range"
             className="w-full rounded-2xl border border-line bg-cream px-5 py-4 text-right text-4xl font-bold tabular-nums focus:border-pine focus:ring-2 focus:ring-pine/30 focus:outline-none"

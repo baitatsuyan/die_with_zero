@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { NumberInput } from "@/components/NumberInput";
 import { QuickResultPanel } from "@/components/QuickResultPanel";
 import { visibleQuickFields, type QuickFieldKey } from "@/components/quickFields";
 import { DEFAULT_QUICK_INPUT, runQuickDiagnosis, type QuickInput } from "@/lib/simulation";
@@ -9,10 +10,7 @@ export function QuickDiagnosis() {
   const [input, setInput] = useState<QuickInput>(DEFAULT_QUICK_INPUT);
   const result = useMemo(() => runQuickDiagnosis(input), [input]);
 
-  const update = (key: QuickFieldKey, raw: string) => {
-    const n = Number(raw);
-    if (Number.isFinite(n)) setInput((prev) => ({ ...prev, [key]: n }));
-  };
+  const update = (key: QuickFieldKey, value: number) => setInput((prev) => ({ ...prev, [key]: value }));
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
@@ -29,15 +27,10 @@ export function QuickDiagnosis() {
               </label>
               {f.hint && <p className="ml-9 text-sm text-muted">{f.hint}</p>}
               <div className="mt-2 ml-9 flex items-center gap-3">
-                <input
+                <NumberInput
                   id={f.key}
-                  type="number"
-                  inputMode="numeric"
-                  min={f.min}
-                  max={f.max}
-                  step={f.step}
                   value={input[f.key]}
-                  onChange={(e) => update(f.key, e.target.value)}
+                  onChange={(v) => update(f.key, Math.min(f.max, v))}
                   className="w-full rounded-xl border border-line bg-cream px-4 py-3 text-right text-xl font-bold tabular-nums focus:border-pine focus:ring-2 focus:ring-pine/30 focus:outline-none"
                 />
                 <span className="w-10 shrink-0 text-muted">{f.unit}</span>

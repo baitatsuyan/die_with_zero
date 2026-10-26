@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { formatMan } from "@/lib/format";
+import { sanitizeDigits } from "@/lib/numberText";
 import { PREFECTURES } from "@/lib/prefectures";
 import { PROPERTY_TYPES, type Estimate, type PropertyType } from "@/lib/realEstateEstimate";
 import { DEFAULT_QUICK_INPUT, type QuickInput } from "@/lib/simulation";
@@ -202,10 +203,10 @@ export function PropertyEstimator() {
             <div className="mt-2 flex items-center gap-3">
               <input
                 id="area"
-                type="number"
+                type="text"
                 inputMode="numeric"
                 value={area}
-                onChange={(e) => setArea(e.target.value)}
+                onChange={(e) => setArea(sanitizeDigits(e.target.value))}
                 className={`${inputClass} text-right tabular-nums`}
               />
               <span className="w-8 shrink-0 text-muted">㎡</span>
@@ -219,10 +220,10 @@ export function PropertyEstimator() {
               <div className="mt-2 flex items-center gap-3">
                 <input
                   id="builtYear"
-                  type="number"
+                  type="text"
                   inputMode="numeric"
                   value={builtYear}
-                  onChange={(e) => setBuiltYear(e.target.value)}
+                  onChange={(e) => setBuiltYear(sanitizeDigits(e.target.value))}
                   aria-invalid={!builtYearValid}
                   className={`${inputClass} text-right tabular-nums`}
                 />

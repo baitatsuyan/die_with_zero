@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { NumberInput } from "@/components/NumberInput";
 import { calculateInheritanceTax, type HeirTax } from "@/lib/inheritanceTax";
 
 type AssetKey = "financialAssets" | "realEstate" | "deathBenefit" | "liabilities";
@@ -36,10 +37,7 @@ export function InheritanceSimulator() {
     return spouseMode === "all" && hasSpouse ? calculateInheritanceTax({ ...base, spouseAcquisition: legal.taxablePrice }) : legal;
   }, [estate, assets.liabilities, assets.deathBenefit, hasSpouse, childrenCount, spouseMode]);
 
-  const updateAsset = (key: AssetKey, raw: string) => {
-    const n = Number(raw);
-    if (Number.isFinite(n) && n >= 0) setAssets((prev) => ({ ...prev, [key]: n }));
-  };
+  const updateAsset = (key: AssetKey, value: number) => setAssets((prev) => ({ ...prev, [key]: value }));
 
   const hasTax = result.taxableEstate > 0;
   const room = result.basicDeduction - result.taxablePrice;
@@ -123,14 +121,10 @@ export function InheritanceSimulator() {
               </label>
               <p className="text-sm text-muted">{f.hint}</p>
               <div className="mt-2 flex items-center gap-3">
-                <input
+                <NumberInput
                   id={f.key}
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  step={100}
                   value={assets[f.key]}
-                  onChange={(e) => updateAsset(f.key, e.target.value)}
+                  onChange={(v) => updateAsset(f.key, v)}
                   className="w-full rounded-xl border border-line bg-cream px-4 py-3 text-right text-xl font-bold tabular-nums focus:border-pine focus:ring-2 focus:ring-pine/30 focus:outline-none"
                 />
                 <span className="w-10 shrink-0 text-muted">万円</span>
