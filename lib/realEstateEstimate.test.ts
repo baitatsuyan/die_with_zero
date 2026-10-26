@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { estimateValue, parseArea, parseBuiltYear, parseTransaction, type Transaction } from "./realEstateEstimate";
+import { estimateValue, groupWards, parseArea, parseBuiltYear, parseTransaction, type Transaction } from "./realEstateEstimate";
 
 const condo = (district: string, priceMan: number, area: number, builtYear: number | null, period = "2025年第1四半期"): Transaction => ({
   type: "中古マンション等",
@@ -82,5 +82,35 @@ describe("estimateValue", () => {
     const r = estimateValue({ propertyType: "condo", areaSqm: 70 }, mixed)!;
     expect(r.periodFrom).toBe("2024年第1四半期");
     expect(r.periodTo).toBe("2026年第1四半期");
+  });
+});
+
+describe("groupWards", () => {
+  it("政令指定都市は市の行を除き、区に市名を付ける", () => {
+    const list = [
+      { id: "14100", name: "横浜市" },
+      { id: "14101", name: "鶴見区" },
+      { id: "14102", name: "神奈川区" },
+      { id: "14130", name: "川崎市" },
+      { id: "14131", name: "川崎区" },
+      { id: "14201", name: "横須賀市" },
+      { id: "14204", name: "鎌倉市" },
+    ];
+    expect(groupWards(list)).toEqual([
+      { id: "14101", name: "横浜市 鶴見区" },
+      { id: "14102", name: "横浜市 神奈川区" },
+      { id: "14131", name: "川崎市 川崎区" },
+      { id: "14201", name: "横須賀市" },
+      { id: "14204", name: "鎌倉市" },
+    ]);
+  });
+
+  it("東京23区のように親の市がない区はそのまま", () => {
+    const list = [
+      { id: "13101", name: "千代田区" },
+      { id: "13102", name: "中央区" },
+      { id: "13201", name: "八王子市" },
+    ];
+    expect(groupWards(list)).toEqual(list);
   });
 });

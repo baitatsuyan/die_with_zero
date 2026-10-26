@@ -155,3 +155,29 @@ export function estimateValue(input: EstimateInput, transactions: Transaction[])
     samples,
   };
 }
+
+export type City = { id: string; name: string };
+
+/**
+ * 政令指定都市は、市そのもの（例：14100 横浜市）と区（14101 鶴見区…）が別々に並ぶが、
+ * 取引事例は区のコードで登録されているため、市そのものを選ぶと事例が見つからない。
+ * 市の行を除き、続く区の名前に市名を付ける（「横浜市 鶴見区」）。東京23区はそのまま。
+ */
+export function groupWards(cities: City[]): City[] {
+  const result: City[] = [];
+  let parent: string | null = null;
+  cities.forEach((c, i) => {
+    const next = cities[i + 1];
+    if (c.name.endsWith("市") && next?.name.endsWith("区")) {
+      parent = c.name;
+      return;
+    }
+    if (parent && c.name.endsWith("区")) {
+      result.push({ id: c.id, name: `${parent} ${c.name}` });
+      return;
+    }
+    parent = null;
+    result.push(c);
+  });
+  return result;
+}

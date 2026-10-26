@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { groupWards } from "@/lib/realEstateEstimate";
 import { fetchCities, ReinfolibNotConfiguredError } from "@/lib/reinfolib";
 
 /** GET /api/real-estate/cities?pref=13 */
@@ -8,7 +9,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "invalid_params" }, { status: 400 });
   }
   try {
-    const cities = await fetchCities(pref);
+    const cities = groupWards(await fetchCities(pref));
     return NextResponse.json({ cities });
   } catch (e) {
     if (e instanceof ReinfolibNotConfiguredError) return NextResponse.json({ error: "not_configured" }, { status: 503 });
