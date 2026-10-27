@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { logout, OFFICE_TYPE_LABELS, useOfficeStore } from "@/lib/office/store";
+import { logout, OFFICE_TYPE_LABELS, useOfficeStore, type SaveStatus } from "@/lib/office/store";
+
+const SAVE_LABELS: Record<SaveStatus, string> = { idle: "", saving: "保存しています…", saved: "保存しました", error: "保存できませんでした。通信を確かめてください" };
 
 /** 事務所向け画面の枠。ログインしていなければログイン画面へ戻す。 */
 export function OfficeShell({ children }: { children: ReactNode }) {
-  const { office, ready } = useOfficeStore();
+  const { office, ready, mode, save } = useOfficeStore();
   const router = useRouter();
   const pathname = usePathname();
   const isLogin = pathname === "/office";
@@ -25,9 +27,17 @@ export function OfficeShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-cream">
-      <div className="bg-ink px-4 py-1.5 text-center text-xs text-white/80 print:hidden">
-        デモ版：データはこのブラウザにだけ保存されます。実在の顧客情報は入れないでください。
-      </div>
+      {mode === "demo" ? (
+        <div className="bg-ink px-4 py-1.5 text-center text-xs text-white/80 print:hidden">
+          デモ版：データはこのブラウザにだけ保存されます。実在の顧客情報は入れないでください。
+        </div>
+      ) : (
+        save !== "idle" && (
+          <div className={`px-4 py-1.5 text-center text-xs print:hidden ${save === "error" ? "bg-alert text-white" : "bg-pine-soft text-pine"}`} role="status">
+            {SAVE_LABELS[save]}
+          </div>
+        )
+      )}
       {office && (
         <header className="border-b border-line bg-white print:hidden">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-6">
@@ -48,8 +58,8 @@ export function OfficeShell({ children }: { children: ReactNode }) {
               </span>
               <button
                 type="button"
-                onClick={() => {
-                  logout();
+                onClick={async () => {
+                  await logout();
                   router.push("/office");
                 }}
                 className="rounded-full border border-line px-4 py-2 font-bold text-muted hover:border-pine hover:text-pine"

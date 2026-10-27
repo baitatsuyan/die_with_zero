@@ -71,8 +71,8 @@ export default function ClientDetailPage() {
                 <span className="font-bold">{plan.name} 様のデータを削除します。元に戻せません。</span>
                 <button
                   type="button"
-                  onClick={() => {
-                    deleteClient(client.id);
+                  onClick={async () => {
+                    await deleteClient(client.id);
                     router.push("/office/clients");
                   }}
                   className="rounded-full bg-alert px-4 py-2 font-bold text-white"

@@ -18,6 +18,8 @@ export default function ClientsPage() {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [birthYear, setBirthYear] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [addError, setAddError] = useState("");
   const thisYear = new Date().getFullYear();
   const birthYearNum = Number(birthYear);
   const canAdd = name.trim() !== "" && birthYearNum >= thisYear - 110 && birthYearNum <= thisYear - 20;
@@ -44,11 +46,18 @@ export default function ClientsPage() {
 
       {adding && (
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            if (!canAdd) return;
-            const id = addClient(name.trim(), birthYearNum);
-            router.push(`/office/clients/${id}`);
+            if (!canAdd || saving) return;
+            setSaving(true);
+            setAddError("");
+            try {
+              const id = await addClient(name.trim(), birthYearNum);
+              router.push(`/office/clients/${id}`);
+            } catch (err) {
+              setAddError(err instanceof Error ? err.message : String(err));
+              setSaving(false);
+            }
           }}
           className="mt-6 grid gap-4 rounded-2xl border border-line bg-white p-5 sm:grid-cols-[1fr_12rem_auto] sm:items-end"
         >
@@ -72,13 +81,18 @@ export default function ClientsPage() {
             />
           </div>
           <div className="flex gap-2">
-            <button type="submit" disabled={!canAdd} className="rounded-full bg-pine px-6 py-3 font-bold text-white disabled:opacity-40">
-              追加して入力へ
+            <button type="submit" disabled={!canAdd || saving} className="rounded-full bg-pine px-6 py-3 font-bold text-white disabled:opacity-40">
+              {saving ? "追加しています…" : "追加して入力へ"}
             </button>
             <button type="button" onClick={() => setAdding(false)} className="rounded-full px-4 py-3 font-bold text-muted">
               やめる
             </button>
           </div>
+          {addError && (
+            <p className="text-sm font-bold text-alert sm:col-span-3" role="alert">
+              追加できませんでした：{addError}
+            </p>
+          )}
         </form>
       )}
 

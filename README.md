@@ -13,7 +13,22 @@
 | `/inheritance` | 相続税の目安 |
 | `/office` | 事務所向けツール（デモ）：顧客一覧・顧客の計画・面談モード・提案書 |
 
-事務所向けツールはいまデモ版で、データはブラウザの localStorage にだけ保存する（`lib/office/store.ts`）。Supabase 導入時は、このファイルの関数を同じ形のまま DB 呼び出しに差し替える。
+事務所向けツールには2つのモードがある（`lib/office/store.ts`）。
+
+- **本番**：Supabase に保存する。メールのリンクでログインし、事務所を登録して、運営が承認すると使える
+- **デモ**：架空の事務所で試す。データはブラウザの localStorage にだけ保存する
+
+## Supabase
+
+- テーブルとアクセス制御（RLS）：`supabase/migrations/0001_init.sql`。Supabase の SQL Editor に貼って実行する（何度実行してもよい）
+- RLS のテスト：`npm run test:db`（PGlite で実行するので DB サーバーは不要）
+- 接続先：`lib/supabase.ts`。publishable キーはブラウザに出す前提のキーなのでコードに置いている。別のプロジェクトにつなぐときは `NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` で上書きする。secret（service_role）キーはリポジトリにもブラウザにも置かない
+- ログインのリンクの戻り先：Supabase の Authentication → URL Configuration で、Site URL と Redirect URLs に公開URLと `http://localhost:3000/office` を登録する
+- 事務所の承認（運営画面ができるまで）：SQL Editor で次を実行する
+
+```sql
+update offices set status = 'active' where name = '（事務所名）';
+```
 
 ## 開発
 
