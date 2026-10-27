@@ -8,7 +8,11 @@ const A = "00000000-0000-0000-0000-00000000000a"; // 税理士
 const B = "00000000-0000-0000-0000-00000000000b"; // 不動産会社
 const C = "00000000-0000-0000-0000-00000000000c"; // 無関係の事務所
 let pass = 0, fail = 0;
-const ok = (name, cond, extra = "") => { cond ? pass++ : fail++; console.log(`${cond ? "PASS" : "FAIL"} ${name} ${extra}`); };
+const ok = (name, cond, extra = "") => {
+  if (cond) pass++;
+  else fail++;
+  console.log(`${cond ? "PASS" : "FAIL"} ${name} ${extra}`);
+};
 
 await db.exec(`
   create schema auth;
