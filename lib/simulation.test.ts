@@ -103,12 +103,30 @@ describe("不動産の売却", () => {
     expect(final).toBeLessThan(DEFAULT_QUICK_INPUT.safetyMargin + 100);
   });
 
-  it("売らないと現金が尽きる場合は、その年齢を売却の期限として示す", () => {
-    const r = runQuickDiagnosis({ ...DEFAULT_QUICK_INPUT, financialAssets: 1500, realEstateValue: 300 });
+  it("売らないと残しておきたい額を割り込む場合は、その年齢から逆算して売却期限を示す", () => {
+    const input = { ...DEFAULT_QUICK_INPUT, financialAssets: 1500, realEstateValue: 300 };
+    const r = runQuickDiagnosis(input);
     expect(r.extraAnnualSpend).toBe(0);
     expect(r.cashDepletionAge).not.toBeNull();
-    expect(r.cashRunOutAge).toBe(r.cashDepletionAge);
-    expect(r.saleAge).toBe(Math.max(DEFAULT_QUICK_INPUT.currentAge + 1, r.cashDepletionAge! - 3));
+    // 0円になる（cashDepletionAge）より前に、残しておきたい額を割り込む
+    const belowReserve = simulate(input).find((p) => p.balance < input.safetyMargin)!.age;
+    expect(r.cashRunOutAge).toBe(belowReserve);
+    expect(r.cashRunOutAge!).toBeLessThanOrEqual(r.cashDepletionAge!);
+    expect(r.saleAge).toBe(Math.max(input.currentAge + 1, belowReserve - 3));
+  });
+
+  it("0円と残しておきたい額の間で止まる使い方でも、売却を前提にした最大の額を見つける", () => {
+    // 以前は、残高が0円を下回らないと売却しなかったため、この条件で使える額を少なく見積もっていた
+    const input = { ...DEFAULT_QUICK_INPUT, currentAge: 70, financialAssets: 4000, realEstateValue: 4200, relocationCost: 200, monthlyHousingAfterSale: 8 };
+    const found = findExtraAnnualSpend(input, true);
+    const feasible = (e: number) => {
+      const { path } = simulatePlan(input, e, true);
+      return path.every((p) => p.balance >= 0) && path[path.length - 1].balance >= input.safetyMargin;
+    };
+    expect(feasible(found)).toBe(true);
+    // 0〜500万円を細かく調べて、実現できる額のうち見つけた額を大きく超えるものはない
+    for (let e = 0; e <= 500; e += 5) if (feasible(e)) expect(e).toBeLessThanOrEqual(found + 5);
+    expect(found).toBeGreaterThan(200);
   });
 
   it("住み替え費用が売却額を上回る場合は売却を計画に入れない", () => {

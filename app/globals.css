@@ -31,3 +31,17 @@ body {
   color: var(--color-ink);
   line-height: 1.8;
 }
+
+/* 提案書の印刷（A4縦） */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  html {
+    font-size: 13px;
+  }
+  body {
+    background: white;
+  }
+}

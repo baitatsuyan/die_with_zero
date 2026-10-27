@@ -19,7 +19,7 @@ export function QuickResultPanel({ input, result, action }: Props) {
   const [copied, setCopied] = useState(false);
   const extraMonthly = result.extraAnnualSpend / 12;
   const hasRealEstate = input.realEstateValue > 0;
-  // 売却期限の目安：現金が尽きる2〜3年前。期限が目前で余裕が取れないときは「できるだけ早めに」
+  // 売却期限の目安：現金が残しておきたい額を下回る2〜3年前。期限が目前で余裕が取れないときは「できるだけ早めに」
   const saleWindow =
     result.saleAge === null || result.cashRunOutAge === null
       ? ""
@@ -80,7 +80,7 @@ export function QuickResultPanel({ input, result, action }: Props) {
           </p>
           <p className="mt-2 text-sm leading-relaxed">
             {result.cashRunOutAge !== null &&
-              `${result.extraAnnualSpend > 0 ? "この使い方だと、" : ""}${result.cashRunOutAge}歳ごろに預貯金・証券が尽きる見込みです。売却には時間がかかることもあるため、${saleWindow}までに売却しておくと安心です。`}
+              `${result.extraAnnualSpend > 0 ? "この使い方だと、" : ""}${result.cashRunOutAge}歳ごろに預貯金・証券が、最期に残しておきたい額（${formatMan(input.safetyMargin)}）を下回る見込みです。売却には時間がかかることもあるため、${saleWindow}までに売却しておくと安心です。`}
             {result.extraAnnualSpend > 0 &&
               `${result.saleAge}歳で売却すると、住み替えの一時費用を差し引いて約${formatMan(result.saleProceeds)}が手元に残り、住み替え先の住居費（月${formatMan(input.monthlyHousingAfterSale)}）を払いながら${input.lifeExpectancy}歳まで暮らせる計算です。`}
           </p>

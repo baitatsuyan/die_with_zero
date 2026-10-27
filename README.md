@@ -11,6 +11,9 @@
 | `/properties` | 不動産の時価推定（国土交通省 不動産情報ライブラリの取引事例から） |
 | `/consult` | 不動産の売却相談フォーム（Netlify Forms） |
 | `/inheritance` | 相続税の目安 |
+| `/office` | 事務所向けツール（デモ）：顧客一覧・顧客の計画・面談モード・提案書 |
+
+事務所向けツールはいまデモ版で、データはブラウザの localStorage にだけ保存する（`lib/office/store.ts`）。Supabase 導入時は、このファイルの関数を同じ形のまま DB 呼び出しに差し替える。
 
 ## 開発
 
@@ -46,6 +49,7 @@ Netlify 側で必要な設定：
 ## 計算ロジック
 
 - `lib/simulation.ts`：使い切りシミュレーション（不動産の売却期限・住み替え費用を含む）
+- `lib/clientPlan.ts`：事務所が顧客とつくる計画のデータと、計算・「次にやること」への変換
 - `lib/inheritanceTax.ts`：相続税の概算
 - `lib/realEstateEstimate.ts`：取引事例からの時価推定
 - `lib/reinfolib.ts`：不動産情報ライブラリ API の呼び出し（サーバー側専用）

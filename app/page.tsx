@@ -69,7 +69,7 @@ const FEATURES = [
   {
     tag: "整理",
     title: "資産整理を、計画のイベントとして扱う",
-    body: "預貯金・証券が何歳で尽きるかから逆算して、実家を「何歳までに売るか」をお伝えします。決めた方針は、その後の資産推移にそのまま反映されます。",
+    body: "預貯金・証券が何歳で足りなくなるかから逆算して、実家を「何歳までに売るか」をお伝えします。決めた方針は、その後の資産推移にそのまま反映されます。",
   },
 ];
 
@@ -80,7 +80,7 @@ const BUCKETS = [
 ];
 
 const FAQ = [
-  { q: "無料で使えますか？", a: "かんたん診断と詳細診断は無料です。不動産の売却・活用や税理士への相談など、専門家をご紹介する場合に提携先から紹介料をいただく仕組みです。" },
+  { q: "無料で使えますか？", a: "ご利用は無料です。運営費は、このツールを使う税理士・司法書士・不動産会社からの月額利用料でまかなっています。専門家をご紹介しても、紹介料は受け取りません。" },
   { q: "銀行や証券口座とつなぐ必要はありますか？", a: "いいえ。金額は手入力で、概算で始められます。口座連携は現在提供していません。" },
   { q: "税金や相続の相談にのってもらえますか？", a: "本サービスでは試算と一般的な情報の提供にとどめています。具体的なご相談は、税理士・弁護士などの専門家をご紹介します。" },
   { q: "特定の金融商品をすすめられませんか？", a: "おすすめしません。私たちは金融商品の販売・推奨を行いません。" },
@@ -271,7 +271,7 @@ export default function Home() {
         <section className="pb-20">
           <div className="mx-auto max-w-4xl px-4 md:px-6">
             <div className="rounded-3xl border-2 border-pine/30 bg-white p-6 md:p-10">
-              <h2 className="text-2xl font-bold">計画は中立に。提案には報酬が発生することを、はっきりお伝えします。</h2>
+              <h2 className="text-2xl font-bold">計画は中立に。紹介料は受け取りません。</h2>
               <ul className="mt-6 space-y-3 text-muted">
                 <li className="flex gap-3">
                   <span className="font-bold text-pine">✓</span>
@@ -279,7 +279,7 @@ export default function Home() {
                 </li>
                 <li className="flex gap-3">
                   <span className="font-bold text-pine">✓</span>
-                  不動産会社や税理士などの専門家をご紹介する場合、提携先から紹介料を受け取ることがあります。その場合は画面上に明示します。
+                  運営費は、参加している事務所からの月額利用料だけです。専門家をご紹介しても紹介料は受け取らず、紹介の件数で料金が変わることもありません。
                 </li>
                 <li className="flex gap-3">
                   <span className="font-bold text-pine">✓</span>

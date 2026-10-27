@@ -4,7 +4,7 @@ export type QuickInput = {
   currentAge: number;
   lifeExpectancy: number; // 初期値 90
   financialAssets: number; // 現預金＋証券の合計
-  realEstateValue: number; // 不動産の時価の合計（現金が尽きる年までに売却する前提）
+  realEstateValue: number; // 不動産の時価の合計（現金が足りなくなる前に売却する前提）
   relocationCost: number; // 売却時の住み替えの一時費用（引越し・賃貸の初期費用・購入費・入居一時金など）
   monthlyHousingAfterSale: number; // 売却後の住居費（月額）：家賃・管理費など
   monthlyPension: number; // 年金見込み（月額）
@@ -20,13 +20,13 @@ export type QuickInput = {
 export type YearPoint = { age: number; balance: number };
 
 export type QuickResult = {
-  path: YearPoint[]; // 追加支出なしの推移（現金が尽きる年に不動産を売却）
+  path: YearPoint[]; // 追加支出なしの推移（必要になれば不動産を売却）
   plannedPath: YearPoint[]; // 「毎年あと使える額」を使った場合の推移
   finalBalance: number; // 追加支出なしで最期に残る見込み額
   extraAnnualSpend: number; // 毎年あと使える額（必要になったら不動産を売却する前提）
   extraAnnualSpendWithoutSale: number; // 不動産を売らずに暮らす場合の毎年あと使える額
-  saleAge: number | null; // 売却期限（現金が尽きる年の SALE_LEAD_YEARS 年前）。計算もこの年齢で売却した場合
-  cashRunOutAge: number | null; // 売却しなければ現金が尽きる年齢
+  saleAge: number | null; // 売却期限（現金が残しておきたい額を下回る年の SALE_LEAD_YEARS 年前）。計算もこの年齢で売却した場合
+  cashRunOutAge: number | null; // 売却しなければ現金が「最期に残しておきたい額」を割り込む年齢
   saleProceeds: number; // 売却で手元に残る額の目安（諸費用・税と住み替えの一時費用を差し引いた額）
   cashDepletionAge: number | null; // 追加支出なし・売却なしで現金が尽きる年齢
   depletionAge: number | null; // 追加支出なしで、売却しても資産が尽きる年齢
@@ -35,7 +35,7 @@ export type QuickResult = {
 /** 売却時の諸費用・税（仲介手数料・譲渡所得税など）として差し引く割合の目安。 */
 export const SALE_COST_RATE = 0.1;
 
-/** 売却には時間がかかるため、現金が尽きる何年前を売却期限とするか。 */
+/** 売却には時間がかかるため、現金が足りなくなる何年前を売却期限とするか。 */
 export const SALE_LEAD_YEARS = 3;
 
 export const DEFAULT_QUICK_INPUT: QuickInput = {
@@ -79,7 +79,9 @@ function runCashFlow(input: QuickInput, extraAnnualSpend: number, saleAt: number
       soldAt !== null ? input.monthlyHousingAfterSale * 12 * Math.pow(1 + input.inflationRate, yearsFromNow) : 0;
     const investmentGain = balance > 0 ? balance * input.expectedReturn : 0;
     balance = balance + income - livingCost - housingAfterSale - extraAnnualSpend + investmentGain;
-    const sellNow = saleAt === "whenNeeded" ? balance < 0 : saleAt === age + 1;
+    // 「必要になったら売る」のは、残高が最期に残しておきたい額を割り込む年。
+    // 0円を下回る年にすると、0円と残しておきたい額の間で止まる使い方を「売らずに失敗」と判定してしまう
+    const sellNow = saleAt === "whenNeeded" ? balance < input.safetyMargin : saleAt === age + 1;
     if (soldAt === null && sellNow && input.realEstateValue > 0) {
       balance += proceeds;
       soldAt = age + 1;
@@ -91,7 +93,7 @@ function runCashFlow(input: QuickInput, extraAnnualSpend: number, saleAt: number
 
 /**
  * 年単位で現金（預貯金・証券）の残高を推移計算する。extraAnnualSpend は毎年の追加支出（インフレ考慮なし）。
- * allowSale が true なら、現金が尽きる年の SALE_LEAD_YEARS 年前に不動産を売却し、
+ * allowSale が true なら、現金が残しておきたい額を下回る年の SALE_LEAD_YEARS 年前に不動産を売却し、
  * 売却額（諸費用・税を差し引いた額）を現金に加える。
  */
 export function simulatePlan(input: QuickInput, extraAnnualSpend = 0, allowSale = false): Simulation {
@@ -115,13 +117,25 @@ function isFeasible(input: QuickInput, extra: number, allowSale: boolean): boole
   return path.every((p) => p.balance >= 0) && path[path.length - 1].balance >= input.safetyMargin;
 }
 
-/** 安全マージンを残しつつ、最期の残高がほぼゼロになる追加支出額を二分探索で求める。 */
+/**
+ * 安全マージンを残しつつ、最期の残高がほぼゼロになる追加支出額を求める。
+ * 売却や住み替えの時期が支出額によって変わるため、「実現できる／できない」は支出額に対して
+ * きれいに切り替わるとは限らない。全体を細かく調べて実現できる最大の区間を見つけ、そこを二分探索で詰める。
+ */
 export function findExtraAnnualSpend(input: QuickInput, allowSale = false): number {
   if (!isFeasible(input, 0, allowSale)) return 0;
-  let low = 0;
-  let high = Math.max(1, input.financialAssets + input.realEstateValue + input.monthlyPension * 12);
-  while (isFeasible(input, high, allowSale)) high *= 2;
-  for (let i = 0; i < 50; i++) {
+  const years = Math.max(1, input.lifeExpectancy - input.currentAge);
+  let upper = (2 * (input.financialAssets + input.realEstateValue)) / years + (input.monthlyPension + input.monthlyOtherIncome) * 12 + 100;
+  while (isFeasible(input, upper, allowSale)) upper *= 2;
+
+  const STEPS = 200;
+  const step = upper / STEPS;
+  let best = 0;
+  for (let i = 1; i <= STEPS; i++) if (isFeasible(input, i * step, allowSale)) best = i * step;
+
+  let low = best;
+  let high = best + step;
+  for (let i = 0; i < 40; i++) {
     const mid = (low + high) / 2;
     if (isFeasible(input, mid, allowSale)) low = mid;
     else high = mid;
@@ -143,7 +157,7 @@ export function runQuickDiagnosis(input: QuickInput): QuickResult {
     finalBalance: base.path[base.path.length - 1].balance,
     extraAnnualSpend,
     extraAnnualSpendWithoutSale,
-    // 使える額が0のとき（使い切りプランが組めないとき）は、追加支出なしで現金が尽きる年が売却の期限
+    // 使える額が0のとき（使い切りプランが組めないとき）は、追加支出なしで足りなくなる年が売却の期限の基準
     saleAge: extraAnnualSpend > 0 ? planned.saleAge : base.saleAge,
     cashRunOutAge: extraAnnualSpend > 0 ? planned.cashRunOutAge : base.cashRunOutAge,
     saleProceeds: netSaleProceeds(input),

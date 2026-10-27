@@ -85,7 +85,7 @@ export default function InheritancePage() {
               <p className="text-sm font-bold tracking-widest text-sun">専門家に相談する</p>
               <h2 className="mt-3 text-2xl leading-snug font-bold md:text-3xl">正確な税額や対策は、税理士と一緒に</h2>
               <p className="mt-4 text-white/80">
-                申告が必要か、どの特例が使えるか、贈与をどう進めるか。相続に詳しい提携税理士をご紹介します。
+                申告が必要か、どの特例が使えるか、贈与をどう進めるか。相続に詳しい参加事務所の税理士をご紹介します。
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button
@@ -100,7 +100,7 @@ export default function InheritancePage() {
                 </Link>
               </div>
               <p className="mt-6 text-xs leading-relaxed text-white/60">
-                ※ 専門家をご紹介した場合、提携先から当社に紹介料が支払われることがあります。試算の結果は紹介の有無によって変わりません。当サービスは個別の税務相談は行っていません。
+                ※ ご紹介は、そのたびにご本人の同意をいただいてから行います。当サービスは紹介料を受け取りません。試算の結果は紹介の有無によって変わりません。当サービスは個別の税務相談は行っていません。
               </p>
             </div>
           </div>

@@ -326,7 +326,7 @@ export function PropertyEstimator() {
         <div className="rounded-3xl bg-pine-soft p-6">
           <p className="font-bold text-pine">売るか、貸すか、持ち続けるか</p>
           <p className="mt-2 text-sm text-muted">
-            かんたん診断では、預貯金・証券が尽きる時期から逆算して「何歳までに売るか」をお伝えします。売却や住み替えのご相談も受け付けています。
+            かんたん診断では、預貯金・証券が足りなくなる時期から逆算して「何歳までに売るか」をお伝えします。売却や住み替えのご相談も受け付けています。
           </p>
           <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
             <Link href="/quick" className="font-bold text-pine hover:underline">

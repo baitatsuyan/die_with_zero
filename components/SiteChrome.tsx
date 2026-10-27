@@ -40,6 +40,7 @@ export function SiteFooter() {
           <Link href="/properties" className="hover:underline">不動産の時価</Link>
           <Link href="/consult" className="hover:underline">売却相談</Link>
           <Link href="/inheritance" className="hover:underline">相続税の目安</Link>
+          <Link href="/office" className="hover:underline">税理士・司法書士・不動産会社の方へ（デモ）</Link>
         </nav>
         <p className="text-xs">© 2026 使い切りプランナー</p>
       </div>
