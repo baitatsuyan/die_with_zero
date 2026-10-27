@@ -17,6 +17,9 @@ import {
   type OfficeType,
 } from "@/lib/office/store";
 
+// デモだけを動かすプレビュー（Supabase につながない環境）ではメールのログインを出さない
+const DEMO_ONLY = process.env.NEXT_PUBLIC_DEMO_ONLY === "1";
+
 export default function OfficeLoginPage() {
   const router = useRouter();
   const { mode, cloud, office } = useOfficeStore();
@@ -32,8 +35,13 @@ export default function OfficeLoginPage() {
       <h1 className="mt-3 text-3xl leading-snug font-bold md:text-4xl">面談で、お客さまと一緒に人生後半の計画をつくる</h1>
 
       <div className="mt-10">
-        {cloud.phase === "loading" && <p className="text-muted">読み込み中…</p>}
-        {cloud.phase === "error" && (
+        {DEMO_ONLY && (
+          <p className="rounded-2xl bg-sun-soft p-5">
+            このプレビューでは、メールでのログインは使えません。下の「デモで試す」から、架空の事務所ですべての画面を試せます。
+          </p>
+        )}
+        {!DEMO_ONLY && cloud.phase === "loading" && <p className="text-muted">読み込み中…</p>}
+        {!DEMO_ONLY && cloud.phase === "error" && (
           <div className="rounded-2xl bg-sun-soft p-5">
             <p className="font-bold text-alert">読み込めませんでした</p>
             <p className="mt-1 text-sm text-muted">{cloud.message}</p>
@@ -42,9 +50,9 @@ export default function OfficeLoginPage() {
             </button>
           </div>
         )}
-        {cloud.phase === "signed_out" && <LoginForm />}
-        {cloud.phase === "needs_registration" && <RegisterOfficeForm email={cloud.email} />}
-        {cloud.phase === "pending" && (
+        {!DEMO_ONLY && cloud.phase === "signed_out" && <LoginForm />}
+        {!DEMO_ONLY && cloud.phase === "needs_registration" && <RegisterOfficeForm email={cloud.email} />}
+        {!DEMO_ONLY && cloud.phase === "pending" && (
           <div className="rounded-2xl border border-line bg-white p-6">
             <p className="text-lg font-bold">{cloud.office.name}</p>
             <p className="mt-2">
