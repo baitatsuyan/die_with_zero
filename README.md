@@ -33,6 +33,11 @@ APIキーがない場合、時価推定の画面は「準備中」と表示さ�
 
 `main` に push すると Netlify が自動でビルド・公開する（設定は `netlify.toml`）。GitHub Actions の CI は Lint・型チェック・テスト・ビルドだけを行う。
 
+Netlify の無料枠では、本番デプロイのたびにクレジットを使う。枠を使い切ると、その請求サイクルの間は本番デプロイが止まる（公開中のサイトはそのまま残る）。
+
+- README・テスト・CI 設定だけの変更では、`netlify.toml` の `ignore` によりビルドを省く
+- 細かい修正はまとめてから `main` に入れる
+
 Netlify 側で必要な設定：
 
 1. **環境変数** `REINFOLIB_API_KEY`：不動産情報ライブラリの APIキー（[API利用申請](https://www.reinfolib.mlit.go.jp/api/request/)で発行）
