@@ -11,7 +11,8 @@
 | `/properties` | 不動産の時価推定（国土交通省 不動産情報ライブラリの取引事例から） |
 | `/consult` | 不動産の売却相談フォーム（Netlify Forms） |
 | `/inheritance` | 相続税の目安 |
-| `/office` | 事務所向けツール（デモ）：顧客一覧・顧客の計画・面談モード・提案書 |
+| `/office` | 事務所向けツール：顧客一覧・顧客の計画・面談モード・提案書 |
+| `/office/referrals` | 紹介ネットワーク：紹介先の選択 → お客さまの同意 → 受信箱（受諾・対応状況） |
 
 事務所向けツールには2つのモードがある（`lib/office/store.ts`）。
 
@@ -20,7 +21,7 @@
 
 ## Supabase
 
-- テーブルとアクセス制御（RLS）：`supabase/migrations/0001_init.sql`。Supabase の SQL Editor に貼って実行する（何度実行してもよい）
+- テーブルとアクセス制御（RLS）：`supabase/migrations/` のファイルを番号順に、Supabase の SQL Editor に貼って実行する（何度実行してもよい）
 - RLS のテスト：`npm run test:db`（PGlite で実行するので DB サーバーは不要）
 - 接続先：`lib/supabase.ts`。publishable キーはブラウザに出す前提のキーなのでコードに置いている。別のプロジェクトにつなぐときは `NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` で上書きする。secret（service_role）キーはリポジトリにもブラウザにも置かない
 - ログインのリンクの戻り先：Supabase の Authentication → URL Configuration で、Site URL と Redirect URLs に公開URLと `http://localhost:3000/office` を登録する
@@ -65,6 +66,7 @@ Netlify 側で必要な設定：
 
 - `lib/simulation.ts`：使い切りシミュレーション（不動産の売却期限・住み替え費用を含む）
 - `lib/clientPlan.ts`：事務所が顧客とつくる計画のデータと、計算・「次にやること」への変換
+- `lib/referrals.ts`：紹介のルール（紹介先の候補、ステータスの変更、同意した範囲のデータ）
 - `lib/inheritanceTax.ts`：相続税の概算
 - `lib/realEstateEstimate.ts`：取引事例からの時価推定
 - `lib/reinfolib.ts`：不動産情報ライブラリ API の呼び出し（サーバー側専用）

@@ -179,7 +179,13 @@ begin
   select plan into p from clients where id = r.client_id;
   if 'basic' = any (c.scopes) then out := out || jsonb_build_object('name', p -> 'name', 'birthYear', p -> 'birthYear'); end if;
   if 'family' = any (c.scopes) then out := out || jsonb_build_object('hasSpouse', p -> 'hasSpouse', 'childrenCount', p -> 'childrenCount'); end if;
-  if 'real_estate' = any (c.scopes) then out := out || jsonb_build_object('realEstates', p -> 'realEstates'); end if;
+  -- 紹介の対象の不動産が決まっていれば、その1件だけを渡す（自宅など、ほかの不動産は渡さない）
+  if 'real_estate' = any (c.scopes) then
+    out := out || jsonb_build_object('realEstates', coalesce(
+      (select jsonb_agg(e) from jsonb_array_elements(coalesce(p -> 'realEstates', '[]'::jsonb)) e
+        where r.real_estate_id is null or e ->> 'id' = r.real_estate_id),
+      '[]'::jsonb));
+  end if;
   if 'financial' = any (c.scopes) then
     out := out || jsonb_build_object('cash', p -> 'cash', 'securities', p -> 'securities', 'deathBenefit', p -> 'deathBenefit',
       'liabilities', p -> 'liabilities', 'pensionMonthly', p -> 'pensionMonthly', 'monthlyLivingCost', p -> 'monthlyLivingCost');

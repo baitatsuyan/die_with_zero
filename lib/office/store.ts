@@ -8,6 +8,19 @@
 import { useSyncExternalStore } from "react";
 import { newClientPlan, type ClientPlan } from "@/lib/clientPlan";
 import { loadJSON, saveJSON } from "@/lib/storage";
+import {
+  canChangeStatus,
+  canReadClientData,
+  scopeClientData,
+  type Consent,
+  type ConsentScope,
+  type DirectoryOffice,
+  type ExclusiveSlot,
+  type Referral,
+  type ReferralPurpose,
+  type ReferralStatus,
+  type ScopedClientData,
+} from "@/lib/referrals";
 import { getSupabase } from "@/lib/supabase";
 
 export type OfficeType = "real_estate" | "tax_accountant" | "judicial_scrivener";
@@ -55,12 +68,17 @@ export type CloudState =
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
+type Network = { referrals: Referral[]; consents: Consent[]; directory: DirectoryOffice[]; slots: ExclusiveSlot[] };
+
 type State = {
   mode: "demo" | "cloud";
   demoOfficeId: string | null;
   demoClients: Client[];
+  demoReferrals: Referral[];
+  demoConsents: Consent[];
   cloud: CloudState;
   cloudClients: Client[];
+  cloudNetwork: Network;
   save: SaveStatus;
 };
 
@@ -71,10 +89,31 @@ export const DEMO_OFFICES: Office[] = [
   { id: "office-js", name: "日本橋司法書士事務所（デモ）", type: "judicial_scrivener", area: { prefecture: "東京都", city: "中央区" }, specialties: ["相続登記", "売買の登記"] },
 ];
 
-const DEMO_KEY = "office-demo-v1"; // { currentOfficeId, clients }（以前の形式のまま）
+// デモの紹介ネットワークにだけいる事務所（ログインはできない）
+const DEMO_NETWORK_ONLY: Office[] = [
+  { id: "office-re2", name: "勝どき不動産（デモ）", type: "real_estate", area: { prefecture: "東京都", city: "中央区" }, specialties: ["マンション売却"] },
+  { id: "office-re3", name: "芝浦不動産（デモ）", type: "real_estate", area: { prefecture: "東京都", city: "港区" }, specialties: ["空き家売却"] },
+  { id: "office-tax2", name: "銀座税理士法人（デモ）", type: "tax_accountant", area: { prefecture: "東京都", city: "中央区" }, specialties: ["譲渡所得", "相続税申告"] },
+];
+const DEMO_DIRECTORY: DirectoryOffice[] = [...DEMO_OFFICES, ...DEMO_NETWORK_ONLY];
+// デモでは、中央区の不動産会社のエリア独占枠を月島不動産が持っている
+const DEMO_SLOTS: ExclusiveSlot[] = [{ prefecture: "東京都", city: "中央区", officeId: "office-re" }];
+
+const DEMO_KEY = "office-demo-v1"; // { currentOfficeId, clients, referrals, consents }
 const MODE_KEY = "office-mode";
 
-const INITIAL: State = { mode: "cloud", demoOfficeId: null, demoClients: [], cloud: { phase: "loading" }, cloudClients: [], save: "idle" };
+const EMPTY_NETWORK: Network = { referrals: [], consents: [], directory: [], slots: [] };
+const INITIAL: State = {
+  mode: "cloud",
+  demoOfficeId: null,
+  demoClients: [],
+  demoReferrals: [],
+  demoConsents: [],
+  cloud: { phase: "loading" },
+  cloudClients: [],
+  cloudNetwork: EMPTY_NETWORK,
+  save: "idle",
+};
 
 let state: State = INITIAL;
 let loaded = false;
@@ -82,7 +121,7 @@ const listeners = new Set<() => void>();
 
 function setState(patch: Partial<State>) {
   state = { ...state, ...patch };
-  saveJSON(DEMO_KEY, { currentOfficeId: state.demoOfficeId, clients: state.demoClients });
+  saveJSON(DEMO_KEY, { currentOfficeId: state.demoOfficeId, clients: state.demoClients, referrals: state.demoReferrals, consents: state.demoConsents });
   saveJSON(MODE_KEY, state.mode);
   listeners.forEach((l) => l());
 }
@@ -90,12 +129,14 @@ function setState(patch: Partial<State>) {
 function ensureLoaded() {
   if (loaded || typeof window === "undefined") return;
   loaded = true;
-  const demo = loadJSON<{ currentOfficeId: string | null; clients: Client[] }>(DEMO_KEY);
+  const demo = loadJSON<{ currentOfficeId: string | null; clients: Client[]; referrals?: Referral[]; consents?: Consent[] }>(DEMO_KEY);
   state = {
     ...INITIAL,
     mode: loadJSON<"demo" | "cloud">(MODE_KEY) ?? (demo?.currentOfficeId ? "demo" : "cloud"),
     demoOfficeId: demo?.currentOfficeId ?? null,
     demoClients: demo?.clients ?? [],
+    demoReferrals: demo?.referrals ?? [],
+    demoConsents: demo?.consents ?? [],
   };
   initCloud();
 }
@@ -125,10 +166,18 @@ export function useOfficeStore() {
     mode: s.mode,
     office,
     clients: office ? clients : [],
+    network: office ? (s.mode === "demo" ? demoNetworkFor(s, office.id) : s.cloudNetwork) : EMPTY_NETWORK,
     cloud: s.cloud,
     save: s.save,
     ready: hydrated && (s.mode === "demo" || s.cloud.phase !== "loading"),
   };
+}
+
+/** デモで、DB の RLS と同じ見え方にする：送った紹介と、同意済みで届いた紹介だけ。 */
+function demoNetworkFor(s: State, officeId: string): Network {
+  const referrals = s.demoReferrals.filter((r) => r.fromOfficeId === officeId || (r.toOfficeId === officeId && r.status !== "awaiting_consent"));
+  const ids = new Set(referrals.map((r) => r.id));
+  return { referrals, consents: s.demoConsents.filter((c) => ids.has(c.referralId)), directory: DEMO_DIRECTORY, slots: DEMO_SLOTS };
 }
 
 const newId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Date.now()));
@@ -137,6 +186,34 @@ const newId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? c
 
 type OfficeRow = { id: string; name: string; type: OfficeType; status: "pending" | "active" | "suspended"; prefecture: string; city: string; specialties: string[] };
 type ClientRow = { id: string; owner_office_id: string; status: ClientStatus; plan: ClientPlan; created_at: string; updated_at: string };
+
+type ReferralRow = {
+  id: string;
+  client_id: string;
+  from_office_id: string;
+  to_office_id: string;
+  purpose: ReferralPurpose;
+  real_estate_id: string | null;
+  message: string | null;
+  status: ReferralStatus;
+  created_at: string;
+  updated_at: string;
+};
+type ConsentRow = { id: string; referral_id: string; client_id: string; scopes: ConsentScope[]; method: Consent["method"]; granted_at: string; revoked_at: string | null };
+
+const toReferral = (r: ReferralRow): Referral => ({
+  id: r.id,
+  clientId: r.client_id,
+  fromOfficeId: r.from_office_id,
+  toOfficeId: r.to_office_id,
+  purpose: r.purpose,
+  realEstateId: r.real_estate_id,
+  message: r.message ?? "",
+  status: r.status,
+  createdAt: r.created_at,
+  updatedAt: r.updated_at,
+});
+const toConsent = (r: ConsentRow): Consent => ({ id: r.id, referralId: r.referral_id, clientId: r.client_id, scopes: r.scopes, method: r.method, grantedAt: r.granted_at, revokedAt: r.revoked_at });
 
 const toOffice = (r: OfficeRow): Office => ({ id: r.id, name: r.name, type: r.type, area: { prefecture: r.prefecture, city: r.city }, specialties: r.specialties ?? [] });
 const toClient = (r: ClientRow): Client => ({
@@ -178,7 +255,34 @@ async function loadCloud(user: { id: string; email?: string } | null) {
 
   const { data: rows, error: clientsError } = await sb.from("clients").select("id, owner_office_id, status, plan, created_at, updated_at").order("updated_at", { ascending: false });
   if (clientsError) return setState({ cloud: { phase: "error", message: clientsError.message } });
-  setState({ cloud: { phase: "ready", email, office, staffName: staff.name }, cloudClients: (rows as ClientRow[]).map(toClient) });
+  const network = await loadCloudNetwork();
+  if (typeof network === "string") return setState({ cloud: { phase: "error", message: network } });
+  setState({ cloud: { phase: "ready", email, office, staffName: staff.name }, cloudClients: (rows as ClientRow[]).map(toClient), cloudNetwork: network });
+}
+
+/** 紹介まわりのデータ（RLS で、自分が送った・受けた分と承認済みの事務所だけが返る）。 */
+async function loadCloudNetwork(): Promise<Network | string> {
+  const sb = getSupabase();
+  const [offices, slots, referrals, consents] = await Promise.all([
+    sb.from("offices").select("id, name, type, status, prefecture, city, specialties").eq("status", "active"),
+    sb.from("exclusive_area_slots").select("prefecture, city, office_id"),
+    sb.from("referrals").select("*").order("updated_at", { ascending: false }),
+    sb.from("consents").select("*"),
+  ]);
+  const error = offices.error ?? slots.error ?? referrals.error ?? consents.error;
+  if (error) return error.message;
+  return {
+    directory: (offices.data as OfficeRow[]).map(toOffice),
+    slots: (slots.data as { prefecture: string; city: string; office_id: string }[]).map((r) => ({ prefecture: r.prefecture, city: r.city, officeId: r.office_id })),
+    referrals: (referrals.data as ReferralRow[]).map(toReferral),
+    consents: (consents.data as ConsentRow[]).map(toConsent),
+  };
+}
+
+async function refreshCloudNetwork() {
+  const network = await loadCloudNetwork();
+  if (typeof network === "string") throw new Error(network);
+  setState({ cloudNetwork: network });
 }
 
 /** ログイン用のリンクをメールで送る。 */
@@ -244,7 +348,7 @@ export async function logout() {
   ensureLoaded();
   if (state.mode === "demo") return setState({ demoOfficeId: null, mode: "cloud" });
   await getSupabase().auth.signOut();
-  setState({ cloud: { phase: "signed_out" }, cloudClients: [] });
+  setState({ cloud: { phase: "signed_out" }, cloudClients: [], cloudNetwork: EMPTY_NETWORK });
 }
 
 export async function addClient(name: string, birthYear: number): Promise<string> {
@@ -301,4 +405,104 @@ function sampleClient(officeId: string): Client {
     memo: "実家（佃）は空き家。長男は売却に前向き、長女は迷っている。",
   };
   return { id: newId(), ownerOfficeId: officeId, status: "planning", plan, createdAt: now, updatedAt: now };
+}
+
+// ---------- 紹介 ----------
+
+const currentOfficeId = () => (state.mode === "demo" ? state.demoOfficeId : state.cloud.phase === "ready" ? state.cloud.office.id : null);
+
+/** 紹介を作る（お客さまの同意待ちの状態）。 */
+export async function createReferral(input: { clientId: string; toOfficeId: string; purpose: ReferralPurpose; realEstateId: string | null; message: string }): Promise<string> {
+  ensureLoaded();
+  const from = currentOfficeId();
+  if (!from) throw new Error("not logged in");
+  if (state.mode === "demo") {
+    const now = new Date().toISOString();
+    const referral: Referral = { id: newId(), fromOfficeId: from, status: "awaiting_consent", createdAt: now, updatedAt: now, ...input };
+    setState({ demoReferrals: [referral, ...state.demoReferrals] });
+    return referral.id;
+  }
+  const { data, error } = await getSupabase()
+    .from("referrals")
+    .insert({ client_id: input.clientId, from_office_id: from, to_office_id: input.toOfficeId, purpose: input.purpose, real_estate_id: input.realEstateId, message: input.message || null })
+    .select("*")
+    .single<ReferralRow>();
+  if (error || !data) throw new Error(error?.message ?? "insert failed");
+  setState({ cloudNetwork: { ...state.cloudNetwork, referrals: [toReferral(data), ...state.cloudNetwork.referrals] } });
+  return data.id;
+}
+
+/** お客さまの同意を記録する。紹介は相手の受信箱に届き、顧客のステータスは「紹介中」になる。 */
+export async function grantConsent(referralId: string, scopes: ConsentScope[]) {
+  ensureLoaded();
+  const all = state.mode === "demo" ? state.demoReferrals : state.cloudNetwork.referrals;
+  const referral = all.find((r) => r.id === referralId);
+  if (!referral || referral.status !== "awaiting_consent") throw new Error("この紹介は同意を記録できる状態ではありません");
+  const markReferred = () => {
+    const c = (state.mode === "demo" ? state.demoClients : state.cloudClients).find((x) => x.id === referral.clientId);
+    if (c && ["pre_meeting", "planning", "decided"].includes(c.status)) updateClient(c.id, { status: "referred" });
+  };
+  if (state.mode === "demo") {
+    const now = new Date().toISOString();
+    const consent: Consent = { id: newId(), referralId, clientId: referral.clientId, scopes, method: "in_meeting", grantedAt: now, revokedAt: null };
+    setState({
+      demoConsents: [...state.demoConsents, consent],
+      demoReferrals: state.demoReferrals.map((r) => (r.id === referralId ? { ...r, status: "sent", updatedAt: now } : r)),
+    });
+    return markReferred();
+  }
+  const { error } = await getSupabase().from("consents").insert({ referral_id: referralId, client_id: referral.clientId, scopes, method: "in_meeting" });
+  if (error) throw new Error(error.message);
+  await refreshCloudNetwork();
+  markReferred();
+}
+
+/** 同意を撤回する。紹介先はすぐにデータを読めなくなる。 */
+export async function revokeConsent(referralId: string) {
+  ensureLoaded();
+  const now = new Date().toISOString();
+  if (state.mode === "demo") {
+    return setState({ demoConsents: state.demoConsents.map((c) => (c.referralId === referralId && c.revokedAt === null ? { ...c, revokedAt: now } : c)) });
+  }
+  const { error } = await getSupabase().from("consents").update({ revoked_at: now }).eq("referral_id", referralId).is("revoked_at", null);
+  if (error) throw new Error(error.message);
+  await refreshCloudNetwork();
+}
+
+/** 紹介のステータスを変える（送った側は取り下げ、受けた側は受諾・辞退・対応状況）。 */
+export async function changeReferralStatus(referralId: string, next: ReferralStatus) {
+  ensureLoaded();
+  const me = currentOfficeId();
+  const all = state.mode === "demo" ? state.demoReferrals : state.cloudNetwork.referrals;
+  const r = all.find((x) => x.id === referralId);
+  if (!r || !me) throw new Error("not found");
+  const side = r.fromOfficeId === me ? "from" : "to";
+  if (!canChangeStatus(side, r.status, next)) throw new Error("このステータスには変更できません");
+  if (state.mode === "demo") {
+    const now = new Date().toISOString();
+    return setState({ demoReferrals: state.demoReferrals.map((x) => (x.id === referralId ? { ...x, status: next, updatedAt: now } : x)) });
+  }
+  const { error } = await getSupabase().from("referrals").update({ status: next }).eq("id", referralId);
+  if (error) throw new Error(error.message);
+  await refreshCloudNetwork();
+}
+
+/** 紹介先として、同意された範囲の顧客データを読む。読めないときは null。 */
+export async function fetchReferredClient(referralId: string): Promise<ScopedClientData | null> {
+  ensureLoaded();
+  if (state.mode === "demo") {
+    const r = state.demoReferrals.find((x) => x.id === referralId);
+    const consent = state.demoConsents.find((c) => c.referralId === referralId && c.revokedAt === null);
+    const client = r && state.demoClients.find((c) => c.id === r.clientId);
+    if (!r || !client || r.toOfficeId !== state.demoOfficeId || !canReadClientData(r.status, consent)) return null;
+    return scopeClientData(client.plan, consent!.scopes, r.realEstateId);
+  }
+  const { data, error } = await getSupabase().rpc("referral_client_data", { p_referral: referralId });
+  if (error) throw new Error(error.message);
+  return (data as ScopedClientData | null) ?? null;
+}
+
+/** 事務所の名前などを、紹介ネットワークの一覧から引く。 */
+export function findOffice(network: { directory: DirectoryOffice[] }, id: string, self: Office | null): DirectoryOffice | Office | undefined {
+  return self?.id === id ? self : network.directory.find((o) => o.id === id);
 }

@@ -7,14 +7,16 @@ import { BalanceChart } from "@/components/BalanceChart";
 import { ClientEditor } from "@/components/office/ClientEditor";
 import { nextActions, summarizePlan } from "@/lib/clientPlan";
 import { formatMan } from "@/lib/format";
-import { CLIENT_STATUS_LABELS, deleteClient, updateClient, useOfficeStore, type ClientStatus } from "@/lib/office/store";
+import { CLIENT_STATUS_LABELS, deleteClient, findOffice, updateClient, useOfficeStore, type ClientStatus } from "@/lib/office/store";
+import { PURPOSE_LABELS, STATUS_LABELS } from "@/lib/referrals";
 
 export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { clients } = useOfficeStore();
+  const { clients, network, office } = useOfficeStore();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const client = clients.find((c) => c.id === id);
+  const referrals = network.referrals.filter((r) => r.clientId === id && r.fromOfficeId === office?.id);
 
   if (!client) {
     return (
@@ -58,6 +60,9 @@ export default function ClientDetailPage() {
           </Link>
           <Link href={`/office/clients/${client.id}/proposal`} className="rounded-full border-2 border-pine px-6 py-3 font-bold text-pine hover:bg-pine-soft">
             提案書をつくる
+          </Link>
+          <Link href={`/office/clients/${client.id}/refer`} className="rounded-full border-2 border-pine px-6 py-3 font-bold text-pine hover:bg-pine-soft">
+            紹介する
           </Link>
         </div>
       </div>
@@ -111,6 +116,23 @@ export default function ClientDetailPage() {
               <dd className="mt-1 text-xl font-bold tabular-nums">{s.taxNow.payableTax > 0 ? formatMan(s.taxNow.payableTax) : "かからない見込み"}</dd>
             </div>
           </dl>
+          {referrals.length > 0 && (
+            <div className="rounded-2xl border border-line bg-white p-5">
+              <p className="font-bold">この方の紹介</p>
+              <ul className="mt-2 space-y-2 text-sm">
+                {referrals.map((r) => (
+                  <li key={r.id} className="flex items-center justify-between gap-3">
+                    <Link href={`/office/referrals/${r.id}`} className="font-bold text-pine hover:underline">
+                      {findOffice(network, r.toOfficeId, office)?.name ?? "（事務所）"}
+                    </Link>
+                    <span className="shrink-0 text-muted">
+                      {PURPOSE_LABELS[r.purpose]}・{STATUS_LABELS[r.status]}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="rounded-2xl border border-line bg-white p-5">
             <p className="font-bold">次にやること</p>
             <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm">

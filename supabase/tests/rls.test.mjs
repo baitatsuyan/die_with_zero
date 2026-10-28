@@ -25,9 +25,10 @@ await db.exec(`
   alter default privileges in schema public grant all on functions to anon, authenticated;
   insert into auth.users values ('${A}', 'a@example.com'), ('${B}', 'b@example.com'), ('${C}', 'c@example.com');
 `);
-await db.exec(readFileSync(new URL("../migrations/0001_init.sql", import.meta.url), "utf8"));
+const migrations = ["0001_init.sql", "0002_referral_property_only.sql"].map((f) => readFileSync(new URL(`../migrations/${f}`, import.meta.url), "utf8"));
+for (const sql of migrations) await db.exec(sql);
 // 2回目の実行でも壊れないこと
-await db.exec(readFileSync(new URL("../migrations/0001_init.sql", import.meta.url), "utf8"));
+for (const sql of migrations) await db.exec(sql);
 ok("migration runs twice", true);
 
 const as = async (uid, sql, params) => {
@@ -42,7 +43,7 @@ const officeB = (await as(B, `select register_office('月島不動産', 'real_es
 const officeC = (await as(C, `select register_office('他区の司法書士', 'judicial_scrivener', '東京都', '港区', '鈴木')`)).rows[0].register_office;
 ok("register twice is rejected", (await as(A, `select register_office('x','tax_accountant','東京都','中央区','x')`)).error?.includes("already registered"));
 
-const plan = JSON.stringify({ name: "山田 花子", birthYear: 1956, hasSpouse: true, childrenCount: 2, cash: 2500, securities: 1500, realEstates: [{ id: "r1", label: "実家", value: 4200 }] });
+const plan = JSON.stringify({ name: "山田 花子", birthYear: 1956, hasSpouse: true, childrenCount: 2, cash: 2500, securities: 1500, realEstates: [{ id: "r1", label: "実家", value: 4200 }, { id: "r2", label: "自宅", value: 6800 }] });
 ok("pending office cannot add clients", !!(await as(A, `insert into clients (owner_office_id, plan) values ($1, $2)`, [officeA, plan])).error);
 ok("pending office sees its own office", (await as(A, `select id from offices`)).rows.length === 1);
 
@@ -60,7 +61,7 @@ ok("other office cannot read the client", (await as(B, `select * from clients`))
 ok("anon cannot read clients", (await as(null, `select * from clients`)).rows?.length === 0);
 ok("offices directory visible to others", (await as(B, `select id from offices`)).rows.length === 3);
 
-const ref = await as(A, `insert into referrals (client_id, from_office_id, to_office_id, purpose) values ($1, $2, $3, 'sale') returning id, status`, [clientId, officeA, officeB]);
+const ref = await as(A, `insert into referrals (client_id, from_office_id, to_office_id, purpose, real_estate_id) values ($1, $2, $3, 'sale', 'r1') returning id, status`, [clientId, officeA, officeB]);
 const refId = ref.rows[0].id;
 ok("referral starts awaiting consent", ref.rows[0].status === "awaiting_consent");
 ok("cannot refer someone else's client", !!(await as(B, `insert into referrals (client_id, from_office_id, to_office_id, purpose) values ($1, $2, $3, 'sale')`, [clientId, officeB, officeC])).error);
@@ -76,6 +77,7 @@ ok("sender cannot accept on receiver's behalf", !!(await as(A, `update referrals
 ok("receiver accepts", (await as(B, `update referrals set status = 'accepted' where id = '${refId}' returning status`)).rows?.[0]?.status === "accepted");
 const data = (await as(B, `select referral_client_data('${refId}') d`)).rows[0].d;
 ok("receiver gets consented scopes only", data?.name === "山田 花子" && Array.isArray(data?.realEstates) && data?.cash === undefined, JSON.stringify(data));
+ok("only the referred property is shared", data?.realEstates?.length === 1 && data.realEstates[0].id === "r1");
 ok("still cannot read clients table directly", (await as(B, `select * from clients`)).rows.length === 0);
 ok("unrelated office sees nothing", (await as(C, `select referral_client_data('${refId}') d`)).rows[0].d === null && (await as(C, `select * from referrals`)).rows.length === 0);
 ok("receiver cannot jump back to sent", !!(await as(B, `update referrals set status = 'sent' where id = '${refId}'`)).error);

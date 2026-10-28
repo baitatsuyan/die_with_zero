@@ -9,12 +9,13 @@ const SAVE_LABELS: Record<SaveStatus, string> = { idle: "", saving: "保存し�
 
 /** 事務所向け画面の枠。ログインしていなければログイン画面へ戻す。 */
 export function OfficeShell({ children }: { children: ReactNode }) {
-  const { office, ready, mode, save } = useOfficeStore();
+  const { office, ready, mode, save, network } = useOfficeStore();
   const router = useRouter();
   const pathname = usePathname();
   const isLogin = pathname === "/office";
   // 面談モードはお客さまと一緒に見る全画面表示なので、事務所向けの帯やヘッダーを出さない
-  const bare = pathname.endsWith("/meeting");
+  const bare = pathname.endsWith("/meeting") || pathname.endsWith("/consent");
+  const waiting = office ? network.referrals.filter((r) => r.toOfficeId === office.id && r.status === "sent").length : 0;
 
   useEffect(() => {
     if (ready && !office && !isLogin) router.replace("/office");
@@ -47,6 +48,26 @@ export function OfficeShell({ children }: { children: ReactNode }) {
                 <span className="hidden sm:inline">使い切りプランナー</span>
               </Link>
               <span className="rounded-full bg-pine-soft px-3 py-1 text-xs font-bold text-pine">事務所向け</span>
+              <nav className="ml-2 flex items-center gap-1 text-sm font-bold">
+                {[
+                  { href: "/office/clients", label: "顧客" },
+                  { href: "/office/referrals", label: "紹介" },
+                ].map((n) => (
+                  <Link
+                    key={n.href}
+                    href={n.href}
+                    aria-current={pathname.startsWith(n.href) ? "page" : undefined}
+                    className={`rounded-full px-4 py-2 ${pathname.startsWith(n.href) ? "bg-pine text-white" : "text-pine hover:bg-pine-soft"}`}
+                  >
+                    {n.label}
+                    {n.href === "/office/referrals" && waiting > 0 && (
+                      <span className="ml-1.5 rounded-full bg-sun px-2 py-0.5 text-xs text-ink" aria-label={`返事待ち${waiting}件`}>
+                        {waiting}
+                      </span>
+                    )}
+                  </Link>
+                ))}
+              </nav>
             </div>
             <div className="flex items-center gap-4 text-sm">
               <span className="text-right">
